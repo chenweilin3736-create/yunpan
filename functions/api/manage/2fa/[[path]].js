@@ -6,7 +6,7 @@
 // POST /api/manage/2fa?action=verify       - 登录时验证 TOTP 码（使用 challenge token，不需要 session）
 
 import { getDatabase } from '../../../utils/databaseAdapter.js';
-import { createSession } from '../../../utils/auth/sessionManager.js';
+import { createSession, validateSession } from '../../../utils/auth/sessionManager.js';
 import {
     generateSecret,
     verifyTOTP,
@@ -74,7 +74,7 @@ export async function onRequest(context) {
  */
 async function handleStatus(context, body) {
     const { env } = context;
-    const { authType, username } = getAuthContext(context);
+    const { authType, username } = await getAuthContext(context);
 
     if (!authType) {
         return jsonRes({ error: '未认证' }, 401);
@@ -96,7 +96,7 @@ async function handleStatus(context, body) {
  */
 async function handleSetup(context, body) {
     const { env } = context;
-    const { authType, username } = getAuthContext(context);
+    const { authType, username } = await getAuthContext(context);
 
     if (!authType) {
         return jsonRes({ error: '未认证' }, 401);
@@ -123,7 +123,7 @@ async function handleSetup(context, body) {
  */
 async function handleEnable(context, body) {
     const { env } = context;
-    const { authType, username } = getAuthContext(context);
+    const { authType, username } = await getAuthContext(context);
 
     if (!authType) {
         return jsonRes({ error: '未认证' }, 401);
@@ -176,7 +176,7 @@ async function handleEnable(context, body) {
  */
 async function handleDisable(context, body) {
     const { env } = context;
-    const { authType, username } = getAuthContext(context);
+    const { authType, username } = await getAuthContext(context);
 
     if (!authType) {
         return jsonRes({ error: '未认证' }, 401);
@@ -319,12 +319,36 @@ async function handleVerify(context, body) {
 
 /**
  * 从 context 获取认证类型和用户名
- * 中间件会设置 context.authType 和 context.authSession
+ * 优先使用中间件注入的信息，否则独立验证 session（fallback）
  */
-function getAuthContext(context) {
-    const authType = context.authType;
-    const username = context.authSession?.username || '';
-    return { authType, username };
+async function getAuthContext(context) {
+    // 优先使用中间件注入的认证信息
+    if (context.authType) {
+        return {
+            authType: context.authType,
+            username: context.authSession?.username || '',
+        };
+    }
+
+    // fallback：独立验证 session
+    const { env, request } = context;
+
+    // 检查 admin session
+    const adminResult = await validateSession(env, request, 'admin');
+    if (adminResult.valid) {
+        return { authType: 'admin', username: '' };
+    }
+
+    // 检查 user session（子账号）
+    const userResult = await validateSession(env, request, 'user');
+    if (userResult.valid && userResult.session?.username) {
+        return {
+            authType: 'user',
+            username: userResult.session.username,
+        };
+    }
+
+    return { authType: null, username: '' };
 }
 
 /**
