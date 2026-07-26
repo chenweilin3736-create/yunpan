@@ -4,6 +4,8 @@ import {
 } from '../../utils/indexManager.js';
 import { getDatabase } from '../../utils/databaseAdapter.js';
 import { createMetadataViewContext, serializeFileRecordForManagement } from '../../utils/metadata/metadataView.js';
+import { validateSession } from '../../utils/auth/sessionManager.js';
+import { getUser } from '../../utils/auth/userManager.js';
 
 // CORS 跨域响应头
 const corsHeaders = {
@@ -14,28 +16,49 @@ const corsHeaders = {
 };
 
 export async function onRequest(context) {
-    const { request, waitUntil } = context;
+    const { request, waitUntil, env } = context;
     const url = new URL(request.url);
 
-    // 子账号目录访问控制：强制将请求目录限制在 allowedDirs 范围内
-    const currentUser = context.currentUser;
-    const isSubAccount = currentUser && context.authType === 'user';
-    if (isSubAccount) {
+    // 子账号目录访问控制：直接从 session 重新加载用户信息，不依赖中间件注入
+    let currentUser = context.currentUser;
+    let isSubAccount = false;
+
+    // 如果中间件没有正确注入 currentUser，则直接从 session 加载
+    if (!currentUser) {
+        const userSession = await validateSession(env, request, 'user');
+        if (userSession.valid && userSession.session?.username) {
+            const db = getDatabase(env);
+            currentUser = await getUser(db, userSession.session.username);
+            if (currentUser) {
+                isSubAccount = true;
+            }
+        }
+    } else {
+        isSubAccount = currentUser && context.authType === 'user';
+    }
+
+    if (isSubAccount && currentUser) {
         const allowedDirs = Array.isArray(currentUser.allowedDirs) ? currentUser.allowedDirs : [];
-        // 如果 allowedDirs 为空数组，子账号无权访问任何目录
-        if (allowedDirs.length === 0) {
-            return new Response(JSON.stringify({
-                files: [],
-                directories: [],
-                totalCount: 0,
-                directFileCount: 0,
-                directFolderCount: 0,
-                returnedCount: 0,
-                restricted: true,
-                message: '您没有访问任何目录的权限'
-            }), {
-                headers: { "Content-Type": "application/json", ...corsHeaders }
-            });
+        // 检查是否有完整访问权限（allowedDirs 包含 '/' 或空数组）
+        const hasFullAccess = allowedDirs.length === 0 || allowedDirs.includes('/');
+        
+        if (!hasFullAccess) {
+            // 子账号受限：后续会根据 dir 参数做进一步过滤
+            // 如果 allowedDirs 为空数组，无权访问任何目录
+            if (allowedDirs.length === 0) {
+                return new Response(JSON.stringify({
+                    files: [],
+                    directories: [],
+                    totalCount: 0,
+                    directFileCount: 0,
+                    directFolderCount: 0,
+                    returnedCount: 0,
+                    restricted: true,
+                    message: '您没有访问任何目录的权限'
+                }), {
+                    headers: { "Content-Type": "application/json", ...corsHeaders }
+                });
+            }
         }
     }
 
@@ -102,17 +125,19 @@ export async function onRequest(context) {
     }
 
     // 子账号目录强制过滤：确保请求目录在 allowedDirs 范围内
-    if (isSubAccount) {
+    if (isSubAccount && currentUser) {
         const allowedDirs = Array.isArray(currentUser.allowedDirs) ? currentUser.allowedDirs : [];
-        if (allowedDirs.length > 0) {
+        const hasFullAccess = allowedDirs.length === 0 || allowedDirs.includes('/');
+        
+        if (!hasFullAccess && allowedDirs.length > 0) {
             // 检查请求的目录是否在允许范围内
             const requestedDir = dir;
             const isAllowed = allowedDirs.some(allowed => {
                 const normAllowed = allowed.replace(/^\/+|\/+$/g, '');
+                if (normAllowed === '') return true; // '/' 表示全部允许
                 // 允许访问该目录及其子目录
-                return requestedDir === '' + normAllowed + '/' ||
-                       requestedDir.startsWith(normAllowed + '/') ||
-                       requestedDir === '' && normAllowed === '';
+                return requestedDir === normAllowed + '/' ||
+                       requestedDir.startsWith(normAllowed + '/');
             });
             if (!isAllowed) {
                 // 不在允许范围内，返回空结果
@@ -242,11 +267,11 @@ export async function onRequest(context) {
             // 子账号：在 KV fallback 路径也需要过滤
             let filteredDbDirs = dbRecords.directories;
             let filteredDbFiles = dbRecords.files;
-            if (isSubAccount) {
+            if (isSubAccount && currentUser) {
                 const allowedDirs = Array.isArray(currentUser.allowedDirs) ? currentUser.allowedDirs : [];
-                const normalizedAllowed = allowedDirs.map(d => d.replace(/^\/+|\/+$/g, ''));
-                const isFullAccess = normalizedAllowed.length === 0 || normalizedAllowed.includes('');
-                if (!isFullAccess) {
+                const hasFullAccess = allowedDirs.length === 0 || allowedDirs.includes('/');
+                if (!hasFullAccess) {
+                    const normalizedAllowed = allowedDirs.map(d => d.replace(/^\/+|\/+$/g, ''));
                     // 根目录下：只显示允许的目录，隐藏散落文件
                     if (dir === '') {
                         filteredDbDirs = dbRecords.directories.filter(d => {
@@ -282,11 +307,11 @@ export async function onRequest(context) {
         // 子账号：过滤掉不在 allowedDirs 范围内的目录和文件
         let filteredDirectories = result.directories;
         let filteredFiles = compatibleFiles;
-        if (isSubAccount) {
+        if (isSubAccount && currentUser) {
             const allowedDirs = Array.isArray(currentUser.allowedDirs) ? currentUser.allowedDirs : [];
-            const normalizedAllowed = allowedDirs.map(d => d.replace(/^\/+|\/+$/g, ''));
-            const isFullAccess = normalizedAllowed.length === 0 || normalizedAllowed.includes('');
-            if (!isFullAccess) {
+            const hasFullAccess = allowedDirs.length === 0 || allowedDirs.includes('/');
+            if (!hasFullAccess) {
+                const normalizedAllowed = allowedDirs.map(d => d.replace(/^\/+|\/+$/g, ''));
                 // 根目录下：只显示允许的目录，隐藏散落文件
                 if (dir === '') {
                     filteredDirectories = result.directories.filter(d => {
