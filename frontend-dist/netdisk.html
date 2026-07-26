@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>个人网盘</title>
 <style>
 :root {
@@ -36,7 +36,7 @@
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
   background: var(--gradient-bg);
   background-attachment: fixed;
   color: var(--ink);
@@ -44,6 +44,13 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.01em;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-overflow-scrolling: touch;
+}
+button, .btn, .btn-icon, .nav-item, .crumb, .file-card, .context-menu-item, .dir-tree-node {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* ===== Layout ===== */
@@ -504,6 +511,22 @@ body {
   font-family: 'SF Mono', Monaco, monospace;
 }
 
+/* ===== Share Modal ===== */
+.share-file-preview {
+  text-align: center;
+  padding: 1rem 0 0.5rem;
+}
+.share-file-preview .file-icon { font-size: 2.8rem; margin-bottom: 0.5rem; }
+.share-file-preview .file-name { font-weight: 700; font-size: 0.95rem; color: var(--ink); word-break: break-all; }
+.share-result-card {
+  text-align: center;
+  padding: 0.5rem 0;
+}
+.share-result-card .result-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.share-result-card .result-title { font-weight: 700; font-size: 0.95rem; color: var(--ink); }
+.share-result-card .result-password { font-size: 0.82rem; color: var(--muted); margin-top: 0.3rem; }
+.share-result-card .result-password strong { color: var(--accent); font-family: 'SF Mono', Monaco, monospace; letter-spacing: 0.05em; }
+
 /* ===== Toast ===== */
 .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; }
 .toast {
@@ -727,11 +750,29 @@ body {
   gap: 0.875rem;
   box-shadow: var(--shadow);
   transition: all 0.2s;
+  cursor: default;
 }
-.share-card:hover { box-shadow: var(--shadow-md); }
+.share-card:hover { box-shadow: var(--shadow-md); border-color: var(--rule-2); }
+.share-card-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+}
 .share-card-info { flex: 1; min-width: 0; }
-.share-card-name { font-size: 0.86rem; font-weight: 600; color: var(--ink); }
-.share-card-meta { font-size: 0.74rem; color: var(--muted); margin-top: 3px; }
+.share-card-name { font-size: 0.86rem; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.share-card-meta { font-size: 0.72rem; color: var(--muted); margin-top: 3px; display: flex; gap: 0.8rem; flex-wrap: wrap; }
+.share-card-meta span { display: inline-flex; align-items: center; gap: 0.2rem; }
+.share-card-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+.share-card-badge {
+  font-size: 0.68rem; padding: 0.15rem 0.5rem; border-radius: 20px;
+  font-weight: 600; flex-shrink: 0;
+}
+.share-card-badge.expired { background: #fef2f2; color: var(--danger); }
+.share-card-badge.active { background: #f0fdf4; color: var(--success); }
+.share-card-badge.has-pwd { background: var(--accent-soft); color: var(--accent); }
 
 /* ===== Mobile Sidebar Toggle ===== */
 .sidebar-toggle-check { display: none; }
@@ -751,6 +792,10 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
 /* ===== Responsive ===== */
+@media (max-width: 1024px) {
+  .search-box { width: 220px; }
+}
+
 @media (max-width: 768px) {
   .mobile-menu-btn { display: flex; }
   .sidebar {
@@ -761,12 +806,92 @@ body {
     box-shadow: var(--shadow-lg);
   }
   .sidebar-toggle-check:checked ~ .app .sidebar { transform: translateX(0); }
-  .content { padding: 1rem; }
-  .topbar { padding: 0.625rem 1rem; }
+  .sidebar-toggle-check:checked ~ .app .sidebar::after {
+    content: ''; position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+    z-index: -1; pointer-events: none;
+  }
+  .content { padding: 0.75rem; }
+  .topbar { padding: 0.5rem 0.75rem; gap: 0.5rem; }
   .breadcrumb { display: none; }
   .user-badge { display: none; }
   .search-box { width: auto; flex: 1; max-width: none; }
-  .file-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.625rem; }
+  .search-input { font-size: 0.8rem; padding: 0.45rem 0.7rem 0.45rem 2rem; }
+  .file-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.5rem; }
+  .btn { font-size: 0.8rem; padding: 0.45rem 0.8rem; }
+  .btn-sm { padding: 0.35rem 0.6rem; font-size: 0.74rem; }
+  .topbar .btn { font-size: 0.78rem; padding: 0.4rem 0.7rem; }
+  .toolbar { gap: 0.4rem; margin-bottom: 0.75rem; }
+  .sort-select { font-size: 0.76rem; padding: 0.4rem 0.55rem; }
+  .btn-icon { width: 30px; height: 30px; font-size: 0.82rem; }
+  .btn-refresh { width: 32px; height: 32px; font-size: 0.9rem; }
+  .modal { max-width: 92vw; padding: 1.25rem; border-radius: var(--radius); }
+  .modal-title { font-size: 1rem; }
+  .modal-input { font-size: 0.85rem; padding: 0.55rem 0.75rem; }
+  .upload-zone { padding: 1.5rem 1rem; }
+  .upload-zone-icon { font-size: 2.5rem; }
+  .upload-zone-text { font-size: 0.82rem; }
+  .login-card { padding: 2rem 1.5rem; width: 92vw; }
+  .login-title { font-size: 1.3rem; }
+  .login-logo { width: 56px; height: 56px; font-size: 2.5rem; }
+  .batch-toolbar { top: 56px; padding: 0.5rem 0.7rem; gap: 0.4rem; flex-wrap: wrap; }
+  .batch-toolbar .btn { font-size: 0.74rem; padding: 0.35rem 0.55rem; }
+}
+
+@media (max-width: 480px) {
+  .content { padding: 0.5rem; }
+  .topbar { padding: 0.4rem 0.5rem; gap: 0.35rem; }
+  .topbar .btn { padding: 0.35rem 0.55rem; font-size: 0.72rem; }
+  .file-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.4rem; }
+  .file-card { padding: 0.6rem; border-radius: var(--radius-sm); }
+  .file-card .file-icon { font-size: 2.2rem; }
+  .file-card .file-name { font-size: 0.72rem; }
+  .file-card .file-meta { font-size: 0.65rem; }
+  .file-thumb { height: 90px; }
+  .file-actions { position: static; display: none; gap: 4px; margin-top: 0.3rem; justify-content: center; }
+  .file-actions .btn-icon { width: 26px; height: 26px; font-size: 0.7rem; }
+  .file-card .file-actions { display: flex; }
+  .file-card .file-checkbox { top: 4px; left: 4px; width: 16px; height: 16px; }
+  .search-box { width: 100%; }
+  .search-input { font-size: 0.78rem; }
+  .toolbar { gap: 0.3rem; }
+  .batch-select-all-label { font-size: 0.74rem; }
+  .sort-select { font-size: 0.72rem; padding: 0.35rem 0.5rem; }
+  .btn-sm { font-size: 0.7rem; padding: 0.3rem 0.5rem; }
+  .btn-icon { width: 28px; height: 28px; font-size: 0.78rem; }
+  .modal { padding: 1rem; max-width: 95vw; border-radius: var(--radius-sm); }
+  .modal-title { font-size: 0.95rem; }
+  .modal-footer { flex-wrap: wrap; }
+  .modal-footer .btn { flex: 1; min-width: 80px; justify-content: center; }
+  .upload-zone { padding: 1.25rem 0.75rem; }
+  .upload-zone-icon { font-size: 2rem; }
+  .upload-zone-text { font-size: 0.78rem; }
+  .upload-item { padding: 0.6rem 0.7rem; }
+  .upload-item-name { font-size: 0.76rem; }
+  .upload-item-status { font-size: 0.68rem; }
+  .trash-item { padding: 0.6rem 0.7rem; }
+  .trash-item-name { font-size: 0.78rem; }
+  .trash-item-meta { font-size: 0.68rem; }
+  .share-card { padding: 0.75rem; flex-wrap: wrap; }
+  .share-card-icon { width: 40px; height: 40px; font-size: 1.6rem; }
+  .share-card-actions { width: 100%; justify-content: flex-end; margin-top: 0.25rem; }
+  .share-card-badge { font-size: 0.64rem; }
+  .login-card { padding: 1.5rem 1.25rem; }
+  .toast-container { top: 0.5rem; right: 0.5rem; left: 0.5rem; }
+  .toast { font-size: 0.78rem; padding: 0.6rem 0.9rem; }
+  .batch-toolbar { top: 48px; border-radius: var(--radius-xs); }
+}
+
+/* 文件表格在移动端隐藏部分列 */
+@media (max-width: 640px) {
+  .file-table { font-size: 0.8rem; }
+  .file-table th:nth-child(3),
+  .file-table td:nth-child(3),
+  .file-table th:nth-child(4),
+  .file-table td:nth-child(4) { display: none; }
+  .file-table th, .file-table td { padding: 0.5rem 0.6rem; }
+  .file-table .col-name { font-size: 0.78rem; }
+  .file-table .col-icon { font-size: 1.1rem; }
+  .file-table .col-actions .btn-icon { width: 26px; height: 26px; font-size: 0.72rem; }
 }
 
 /* ===== Hidden ===== */
@@ -2293,30 +2418,31 @@ async function directUpload(file, updateProgress) {
 function showShareModal(fileIdEncoded, fileName) {
   shareContext = { fileId: decodeURIComponent(fileIdEncoded), fileName };
   showModal('创建分享链接', `
-    <div style="text-align:center;margin-bottom:1rem">
-      <div style="font-size:2rem">${getFileIcon(fileName)}</div>
-      <div style="font-weight:600;margin-top:0.3rem">${escapeHtml(fileName)}</div>
+    <div class="share-file-preview">
+      <div class="file-icon">${getFileIcon(fileName)}</div>
+      <div class="file-name">${escapeHtml(fileName)}</div>
     </div>
     <div class="modal-field">
-      <label class="modal-label">访问密码(可选)</label>
+      <label class="modal-label">🔒 访问密码(可选)</label>
       <input type="text" class="modal-input" id="sharePassword" placeholder="留空则公开可访问">
     </div>
     <div class="modal-field">
-      <label class="modal-label">过期时间</label>
+      <label class="modal-label">⏱️ 过期时间</label>
       <select class="modal-input" id="shareExpiry">
+        <option value="3600">1 小时</option>
         <option value="86400">1 天</option>
         <option value="604800" selected>7 天</option>
         <option value="2592000">30 天</option>
-        <option value="0">永久</option>
+        <option value="0">永久有效</option>
       </select>
     </div>
     <div class="modal-field">
-      <label class="modal-label">下载次数限制(可选)</label>
+      <label class="modal-label">⬇️ 下载次数限制(可选)</label>
       <input type="number" class="modal-input" id="shareLimit" placeholder="留空则不限制" min="1">
     </div>
   `, [
     { text: '取消', class: 'btn-outline', onclick: closeModal },
-    { text: '创建分享', class: 'btn-primary', onclick: createShare }
+    { text: '创建分享链接', class: 'btn-primary', onclick: createShare }
   ]);
 }
 
@@ -2341,15 +2467,18 @@ async function createShare() {
     });
     
     // 显示分享链接
-    showModal('分享链接已创建', `
-      <div style="text-align:center;margin-bottom:1rem">
-        <div style="font-size:2rem">✅</div>
-        <div style="font-weight:600;margin-top:0.3rem">${escapeHtml(shareContext.fileName)}</div>
+    const expiryText = resp.expiresAt ? `有效期至 ${formatDate(resp.expiresAt)}` : '永久有效';
+    const limitText = resp.downloadLimit ? ` · 最多下载 ${resp.downloadLimit} 次` : '';
+    showModal('✅ 分享链接已创建', `
+      <div class="share-result-card">
+        <div class="result-icon">🔗</div>
+        <div class="result-title">${escapeHtml(shareContext.fileName)}</div>
+        ${password ? `<div class="result-password">访问密码: <strong>${escapeHtml(password)}</strong></div>` : ''}
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem">${expiryText}${limitText}</div>
       </div>
-      ${password ? `<div style="margin-bottom:0.5rem;font-size:0.85rem;color:var(--muted)">访问密码: <strong style="color:var(--accent)">${escapeHtml(password)}</strong></div>` : ''}
       <div class="share-link-box">
         <input type="text" class="share-link-input" id="shareLinkInput" value="${resp.shareUrl}" readonly>
-        <button class="btn btn-primary btn-sm" onclick="copyShareLink()">复制</button>
+        <button class="btn btn-primary btn-sm" onclick="copyShareLink()">📋 复制</button>
       </div>
     `, [
       { text: '关闭', class: 'btn-outline', onclick: closeModal }
@@ -2384,22 +2513,32 @@ async function loadShares() {
       return;
     }
     
-    let html = '<table class="file-table"><thead><tr><th>文件名</th><th>创建时间</th><th>过期</th><th>下载</th><th>操作</th></tr></thead><tbody>';
+    let html = '';
     shares.forEach(share => {
       const expired = share.expiresAt && Date.now() > share.expiresAt;
-      const expiryText = share.expiresAt ? formatDate(share.expiresAt) : '永久';
-      html += `<tr>
-        <td class="col-name"><span class="col-icon">${getFileIcon(share.fileName)}</span>${escapeHtml(share.fileName)}</td>
-        <td>${formatDate(share.createdAt)}</td>
-        <td>${expired ? '<span style="color:var(--danger)">已过期</span>' : expiryText}</td>
-        <td>${share.downloadCount || 0}${share.downloadLimit ? '/' + share.downloadLimit : ''}</td>
-        <td class="col-actions">
-          <button class="btn-icon" onclick="copyShareUrl('${share.shareId}')" title="复制链接">📋</button>
-          <button class="btn-icon" onclick="deleteShare('${share.shareId}')" title="删除">🗑️</button>
-        </td>
-      </tr>`;
+      const expiryText = share.expiresAt ? formatDate(share.expiresAt) : '永久有效';
+      const badgeClass = expired ? 'expired' : 'active';
+      const badgeText = expired ? '已过期' : '有效';
+      const pwdBadge = share.password ? '<span class="share-card-badge has-pwd">🔒 有密码</span>' : '';
+      
+      html += `<div class="share-card">
+        <div class="share-card-icon">${getFileIcon(share.fileName)}</div>
+        <div class="share-card-info">
+          <div class="share-card-name">${escapeHtml(share.fileName)}</div>
+          <div class="share-card-meta">
+            <span>📅 ${formatDate(share.createdAt)}</span>
+            <span>⏱️ ${expiryText}</span>
+            <span>⬇️ ${share.downloadCount || 0}${share.downloadLimit ? '/' + share.downloadLimit : ''} 次</span>
+          </div>
+        </div>
+        <span class="share-card-badge ${badgeClass}">${badgeText}</span>
+        ${pwdBadge}
+        <div class="share-card-actions">
+          <button class="btn-icon" onclick="event.stopPropagation();copyShareUrl('${share.shareId}')" title="复制链接">📋</button>
+          <button class="btn-icon" onclick="event.stopPropagation();deleteShare('${share.shareId}')" title="删除" style="color:var(--danger)">🗑️</button>
+        </div>
+      </div>`;
     });
-    html += '</tbody></table>';
     container.innerHTML = html;
   } catch (err) {
     container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>加载失败: ${err.message}</div></div>`;
