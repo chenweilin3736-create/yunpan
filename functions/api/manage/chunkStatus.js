@@ -1,6 +1,6 @@
 // 查询分片上传进度（断点续传）
-import { userAuthCheck, UnauthorizedResponse } from "../utils/auth/userAuth";
-import { getDatabase } from '../utils/databaseAdapter.js';
+import { userAuthCheck, UnauthorizedResponse } from "../../utils/auth/userAuth";
+import { getDatabase } from '../../utils/databaseAdapter.js';
 
 export async function onRequestGet(context) {
     const { request, env, url } = context;
