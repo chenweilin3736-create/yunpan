@@ -318,7 +318,7 @@ async function deleteWebDAVFile(env, img) {
 }
 
 // 软删除：将文件移入回收站（不删除存储后端数据）
-async function moveToTrash(env, fileId) {
+export async function moveToTrash(env, fileId) {
     try {
         const db = getDatabase(env);
         const img = await db.getWithMetadata(fileId);
