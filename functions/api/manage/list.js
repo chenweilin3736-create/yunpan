@@ -257,8 +257,10 @@ async function getAllFileRecords(env, dir) {
             cursor = response.cursor;
 
             for (const item of response.keys) {
-                // 跳过管理相关的键
-                if (item.name.startsWith('manage@') || item.name.startsWith('chunk_')) {
+                // 跳过管理相关的键和回收站、上传会话等系统键
+                if (item.name.startsWith('manage@') || item.name.startsWith('chunk_') ||
+                    item.name.startsWith('trash_') || item.name.startsWith('upload_session_') ||
+                    item.name.startsWith('op_') || item.name.startsWith('index_')) {
                     continue;
                 }
 

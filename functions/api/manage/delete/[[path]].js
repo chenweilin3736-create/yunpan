@@ -81,9 +81,9 @@ export async function onRequest(context) {
                 }
             }
 
-            // 批量从索引中删除文件
+            // 批量从索引中删除文件（同步等待，避免删除后文件仍显示的竞态问题）
             if (deletedFiles.length > 0) {
-                waitUntil(batchRemoveFilesFromIndex(context, deletedFiles));
+                await batchRemoveFilesFromIndex(context, deletedFiles);
             }
 
             return new Response(JSON.stringify({
@@ -119,15 +119,16 @@ export async function onRequest(context) {
             if (!success) {
                 throw new Error('Move to trash failed');
             } else {
-                waitUntil(removeFileFromIndex(context, fileId));
+                // 同步等待索引更新，避免删除后刷新仍显示文件的竞态问题
+                await removeFileFromIndex(context, fileId);
             }
         } else {
             const success = await deleteFile(env, fileId, cdnUrl, url);
             if (!success) {
                 throw new Error('Delete file failed');
             } else {
-                // 从索引中删除文件
-                waitUntil(removeFileFromIndex(context, fileId));
+                // 从索引中删除文件（同步等待）
+                await removeFileFromIndex(context, fileId);
             }
         }
 
