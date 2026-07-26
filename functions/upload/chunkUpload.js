@@ -134,8 +134,52 @@ export async function handleChunkUpload(context) {
         // 将渠道名称存入 context
         context.specifiedChannelName = channelName;
 
-        // 立即创建分块记录，标记为"uploading"状态
         const chunkKey = `chunk_${uploadId}_${chunkIndex.toString().padStart(3, '0')}`;
+
+        // ===== 幂等性检查:防止重复上传到Telegram =====
+        // 检查分块是否已存在
+        try {
+            const existingChunk = await db.getWithMetadata(chunkKey, { type: 'arrayBuffer' });
+            if (existingChunk && existingChunk.metadata) {
+                const existingStatus = existingChunk.metadata.status;
+
+                // 如果分块已完成，直接返回成功（幂等性，避免重复上传）
+                if (existingStatus === 'completed') {
+                    return createResponse(JSON.stringify({
+                        success: true,
+                        message: `Chunk ${chunkIndex + 1}/${totalChunks} already completed`,
+                        uploadId,
+                        chunkIndex,
+                        alreadyCompleted: true
+                    }), {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
+
+                // 如果分块正在上传中且未超时，返回409冲突（避免并发重复上传）
+                if (existingStatus === 'uploading' &&
+                    existingChunk.metadata.timeoutThreshold &&
+                    Date.now() < existingChunk.metadata.timeoutThreshold) {
+                    return createResponse(JSON.stringify({
+                        success: false,
+                        message: `Chunk ${chunkIndex + 1}/${totalChunks} is still uploading`,
+                        uploadId,
+                        chunkIndex,
+                        inProgress: true,
+                        retryAfter: 10
+                    }), {
+                        status: 409,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
+            }
+        } catch (checkError) {
+            // 检查失败时继续正常上传流程
+            console.warn(`Idempotency check failed for chunk ${chunkIndex}:`, checkError.message);
+        }
+
+        // 立即创建分块记录，标记为"uploading"状态
         const chunkData = await chunk.arrayBuffer();
         const uploadStartTime = Date.now();
         const initialChunkMetadata = {
