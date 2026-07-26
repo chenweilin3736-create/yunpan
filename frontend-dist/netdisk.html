@@ -1087,11 +1087,24 @@ button, .btn, .btn-icon, .nav-item, .crumb, .file-card, .context-menu-item, .dir
   <div class="login-card">
     <div class="login-logo">📁</div>
     <div class="login-title">我的网盘</div>
-    <div class="login-subtitle">请输入管理员账号密码以继续</div>
-    <input type="text" class="login-input" id="loginUsername" placeholder="管理员用户名" onkeydown="if(event.key==='Enter')document.getElementById('loginPassword').focus()">
-    <input type="password" class="login-input" id="loginPassword" placeholder="密码" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="login-btn" id="loginBtn" onclick="doLogin()">登录</button>
-    <div class="login-error" id="loginError"></div>
+    <div style="display:flex;gap:0;margin-bottom:1rem;border-radius:var(--radius-xs);overflow:hidden;border:1px solid var(--rule)">
+      <button class="login-tab active" id="tabAdmin" onclick="switchLoginTab('admin')" style="flex:1;padding:0.5rem;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:0.84rem;font-weight:600;transition:all 0.2s">管理员</button>
+      <button class="login-tab" id="tabSub" onclick="switchLoginTab('sub')" style="flex:1;padding:0.5rem;background:var(--surface-2);color:var(--muted);border:none;cursor:pointer;font-size:0.84rem;font-weight:600;transition:all 0.2s">子账号</button>
+    </div>
+    <div id="loginFormAdmin">
+      <div class="login-subtitle" style="margin-bottom:0.75rem">请输入管理员账号密码</div>
+      <input type="text" class="login-input" id="loginUsername" placeholder="管理员用户名" onkeydown="if(event.key==='Enter')document.getElementById('loginPassword').focus()">
+      <input type="password" class="login-input" id="loginPassword" placeholder="密码" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="login-btn" id="loginBtn" onclick="doLogin()">登录</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+    <div id="loginFormSub" style="display:none">
+      <div class="login-subtitle" style="margin-bottom:0.75rem">请输入子账号和密码</div>
+      <input type="text" class="login-input" id="subLoginUsername" placeholder="子账号用户名" onkeydown="if(event.key==='Enter')document.getElementById('subLoginPassword').focus()">
+      <input type="password" class="login-input" id="subLoginPassword" placeholder="密码" onkeydown="if(event.key==='Enter')doSubLogin()">
+      <button class="login-btn" id="subLoginBtn" onclick="doSubLogin()">登录</button>
+      <div class="login-error" id="subLoginError"></div>
+    </div>
   </div>
 </div>
 
@@ -1454,7 +1467,25 @@ async function checkSession() {
   }
 }
 
-// 登录
+// 登录 Tab 切换
+function switchLoginTab(tab) {
+  const tabAdmin = document.getElementById('tabAdmin');
+  const tabSub = document.getElementById('tabSub');
+  const formAdmin = document.getElementById('loginFormAdmin');
+  const formSub = document.getElementById('loginFormSub');
+  if (tab === 'admin') {
+    tabAdmin.style.background = 'var(--accent)'; tabAdmin.style.color = '#fff';
+    tabSub.style.background = 'var(--surface-2)'; tabSub.style.color = 'var(--muted)';
+    formAdmin.style.display = ''; formSub.style.display = 'none';
+  } else {
+    tabSub.style.background = 'var(--accent)'; tabSub.style.color = '#fff';
+    tabAdmin.style.background = 'var(--surface-2)'; tabAdmin.style.color = 'var(--muted)';
+    formSub.style.display = ''; formAdmin.style.display = 'none';
+    document.getElementById('subLoginUsername')?.focus();
+  }
+}
+
+// 管理员登录
 async function doLogin() {
   const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value.trim();
@@ -1483,6 +1514,45 @@ async function doLogin() {
       errEl.textContent = '账号或密码错误,请重试';
     } else {
       errEl.textContent = `登录失败 (HTTP ${resp.status})`;
+    }
+  } catch (err) {
+    errEl.textContent = '网络错误: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '登录';
+  }
+}
+
+// 子账号登录
+async function doSubLogin() {
+  const username = document.getElementById('subLoginUsername').value.trim();
+  const password = document.getElementById('subLoginPassword').value.trim();
+  const errEl = document.getElementById('subLoginError');
+  const btn = document.getElementById('subLoginBtn');
+  if (!username || !password) { errEl.textContent = '请输入用户名和密码'; return; }
+  
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = '登录中...';
+  
+  try {
+    const resp = await fetch(`${API_BASE}/api/auth/subLogin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+      credentials: 'include',
+    });
+    if (resp.ok) {
+      isLoggedIn = true;
+      document.getElementById('loginOverlay').style.display = 'none';
+      loadFiles();
+      loadStorageStats();
+      updateBadges();
+      loadTagsNav();
+      showToast(`欢迎, ${username}`, 'success');
+    } else {
+      const data = await resp.json().catch(() => ({}));
+      errEl.textContent = data.error || `登录失败 (HTTP ${resp.status})`;
     }
   } catch (err) {
     errEl.textContent = '网络错误: ' + err.message;

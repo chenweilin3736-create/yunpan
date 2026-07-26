@@ -46,6 +46,11 @@ export async function onRequest(context) {
         // 有路径参数的路由（pathParam = username）
         const username = pathParam;
 
+        // GET /api/manage/users/{username} - 获取单个子账号信息
+        if (request.method === 'GET') {
+            return await handleGetUser(db, username);
+        }
+
         // PUT /api/manage/users/{username} - 更新子账号
         if (request.method === 'PUT') {
             return await handleUpdateUser(db, username, request);
@@ -70,6 +75,17 @@ export async function onRequest(context) {
         console.error('Error in users API:', error);
         return jsonRes({ error: error.message || 'Internal server error' }, 500);
     }
+}
+
+/**
+ * 获取单个子账号信息
+ */
+async function handleGetUser(db, username) {
+    const user = await getUser(db, username);
+    if (!user) {
+        return jsonRes({ error: '用户不存在' }, 404);
+    }
+    return jsonRes(user);
 }
 
 /**
