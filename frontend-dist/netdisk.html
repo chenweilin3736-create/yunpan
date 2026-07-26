@@ -1139,11 +1139,12 @@ async function chunkedUpload(file, totalChunks, updateProgress) {
   
   const uploadId = initResp.uploadId;
   
-  // Step 2: 逐片上传(并发 3 片)
+  // Step 2: 逐片上传(并发 2 片,大文件降低并发避免超时)
   updateProgress(0, `上传中 0/${totalChunks}`);
   let uploadedCount = 0;
-  const concurrency = 3;
+  const concurrency = totalChunks > 100 ? 2 : 3;
   let nextChunk = 0;
+  const failedChunks = [];
   
   async function uploadOneChunk() {
     while (nextChunk < totalChunks) {
@@ -1153,7 +1154,8 @@ async function chunkedUpload(file, totalChunks, updateProgress) {
       const chunkBlob = file.slice(start, end);
       
       let retry = 0;
-      const maxRetry = 3;
+      const maxRetry = 5;
+      let success = false;
       while (retry < maxRetry) {
         try {
           const chunkFormData = new FormData();
@@ -1171,11 +1173,17 @@ async function chunkedUpload(file, totalChunks, updateProgress) {
           uploadedCount++;
           const percent = (uploadedCount / totalChunks) * 95;
           updateProgress(percent, `上传中 ${uploadedCount}/${totalChunks}`);
+          success = true;
           break;
         } catch (err) {
           retry++;
-          if (retry >= maxRetry) throw new Error(`分片 ${chunkIndex + 1} 上传失败: ${err.message}`);
-          await new Promise(r => setTimeout(r, 1000 * retry));
+          if (retry >= maxRetry) {
+            console.warn(`分片 ${chunkIndex + 1} 失败 ${retry} 次,稍后重试: ${err.message}`);
+            failedChunks.push(chunkIndex);
+            break;
+          }
+          // 指数退避: 2s, 4s, 8s, 16s
+          await new Promise(r => setTimeout(r, 2000 * Math.pow(2, retry - 1)));
         }
       }
     }
@@ -1185,6 +1193,46 @@ async function chunkedUpload(file, totalChunks, updateProgress) {
   const workers = [];
   for (let i = 0; i < concurrency; i++) workers.push(uploadOneChunk());
   await Promise.all(workers);
+  
+  // 重试之前失败的分片(逐个串行,最大化成功率)
+  if (failedChunks.length > 0) {
+    updateProgress(95, `重试失败分片 ${failedChunks.length}/${totalChunks}...`);
+    console.log(`重试 ${failedChunks.length} 个失败分片...`);
+    
+    for (const chunkIndex of failedChunks) {
+      let retry = 0;
+      const maxRetry = 3;
+      while (retry < maxRetry) {
+        try {
+          const start = chunkIndex * CHUNK_SIZE;
+          const end = Math.min(start + CHUNK_SIZE, file.size);
+          const chunkBlob = file.slice(start, end);
+          
+          const chunkFormData = new FormData();
+          chunkFormData.append('file', chunkBlob);
+          chunkFormData.append('chunkIndex', chunkIndex);
+          chunkFormData.append('totalChunks', totalChunks);
+          chunkFormData.append('uploadId', uploadId);
+          chunkFormData.append('originalFileName', file.name);
+          chunkFormData.append('originalFileType', file.type || 'application/octet-stream');
+          
+          await apiFetch(`${API_BASE}/upload?chunked=true&uploadChannel=telegram`, {
+            method: 'POST', body: chunkFormData, headers: getAuthHeaders()
+          });
+          
+          uploadedCount++;
+          updateProgress((uploadedCount / totalChunks) * 95, `重试成功 ${uploadedCount}/${totalChunks}`);
+          break;
+        } catch (err) {
+          retry++;
+          if (retry >= maxRetry) {
+            throw new Error(`分片 ${chunkIndex + 1} 重试 ${maxRetry} 次后仍失败: ${err.message}`);
+          }
+          await new Promise(r => setTimeout(r, 3000 * retry));
+        }
+      }
+    }
+  }
   
   // Step 3: 合并
   updateProgress(96, '合并文件中...');
@@ -1200,9 +1248,22 @@ async function chunkedUpload(file, totalChunks, updateProgress) {
     mergeFormData.append('uploadFolder', currentDir);
   }
   
-  await apiFetch(mergeUrl, {
-    method: 'POST', body: mergeFormData, headers: getAuthHeaders()
-  });
+  // 合并请求也可能超时,加重试
+  let mergeRetry = 0;
+  const maxMergeRetry = 3;
+  while (mergeRetry < maxMergeRetry) {
+    try {
+      await apiFetch(mergeUrl, {
+        method: 'POST', body: mergeFormData, headers: getAuthHeaders()
+      });
+      break;
+    } catch (err) {
+      mergeRetry++;
+      if (mergeRetry >= maxMergeRetry) throw new Error(`文件合并失败: ${err.message}`);
+      updateProgress(96, `合并重试 ${mergeRetry}/${maxMergeRetry}...`);
+      await new Promise(r => setTimeout(r, 3000 * mergeRetry));
+    }
+  }
   
   updateProgress(99, '完成');
 }
