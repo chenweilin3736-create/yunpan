@@ -538,7 +538,7 @@ body {
           <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">选择文件</button>
           <input type="file" id="fileInput" multiple style="display:none" onchange="handleFileSelect(event)">
           <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--muted)">
-            支持大文件分片上传(每片 16MB),1小时内传完即可
+            支持大文件分片上传(每片16MB),断点续传,1小时内传完即可
           </div>
         </div>
         <div class="upload-list" id="uploadList"></div>
@@ -1076,19 +1076,51 @@ async function uploadFile(file) {
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
   const isChunked = file.size > CHUNK_SIZE;
   
+  // 断点续传: 检查是否有未完成的上传
+  let resumedUploadId = null;
+  let resumedCompletedChunks = [];
+  if (isChunked) {
+    const resumeInfo = getResumeInfo(file);
+    if (resumeInfo) {
+      // 查询后端该上传会话是否还有效,以及已完成的分片
+      try {
+        const resp = await apiFetch(`${API_BASE}/api/manage/chunkStatus?uploadId=${resumeInfo.uploadId}&totalChunks=${totalChunks}`, {
+          headers: getAuthHeaders()
+        });
+        if (resp.valid && resp.completedCount > 0 && resp.completedCount < totalChunks) {
+          resumedUploadId = resumeInfo.uploadId;
+          resumedCompletedChunks = resp.completedChunks;
+          showToast(`检测到未完成的上传,从 ${resp.completedCount}/${totalChunks} 继续`, 'info');
+        } else if (resp.valid && resp.completedCount === totalChunks) {
+          // 所有分片已完成,直接合并
+          showToast('所有分片已上传,正在合并...', 'info');
+          // 走正常合并流程
+        } else {
+          // 会话过期,清除记录
+          clearResumeInfo(file);
+        }
+      } catch (e) {
+        console.warn('检查断点续传失败:', e.message);
+      }
+    }
+  }
+  
   // 创建上传项 UI
   const uploadList = document.getElementById('uploadList');
   const item = document.createElement('div');
   item.className = 'upload-item';
   item.id = uploadId;
+  const initialPercent = resumedCompletedChunks.length > 0 ? (resumedCompletedChunks.length / totalChunks * 95) : 0;
+  const initialStatus = resumedCompletedChunks.length > 0 ? `续传中 ${resumedCompletedChunks.length}/${totalChunks}` : (isChunked ? `${formatSize(file.size)} · 分片上传 ${totalChunks} 片` : `${formatSize(file.size)} · 直传`);
   item.innerHTML = `
     <div style="font-size:1.5rem">${getFileIcon(file.name)}</div>
     <div class="upload-item-info">
       <div class="upload-item-name">${escapeHtml(file.name)}</div>
-      <div class="upload-item-status">${formatSize(file.size)} ${isChunked ? '· 分片上传 ' + totalChunks + ' 片' : '· 直传'}</div>
-      <div class="progress-bar"><div class="progress-fill" style="width:0%"></div></div>
+      <div class="upload-item-status">${initialStatus}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${initialPercent}%"></div></div>
     </div>
-    <div class="upload-item-status" style="min-width:60px;text-align:right">0%</div>
+    <div class="upload-item-status" style="min-width:60px;text-align:right">${Math.round(initialPercent)}%</div>
+    ${resumedUploadId ? `<button class="btn-icon" onclick="cancelResume('${escapeHtml(file.name)}')" title="取消续传" style="margin-left:8px">✕</button>` : ''}
   `;
   uploadList.appendChild(item);
   
@@ -1104,12 +1136,14 @@ async function uploadFile(file) {
   
   try {
     if (isChunked) {
-      await chunkedUpload(file, totalChunks, updateProgress);
+      await chunkedUpload(file, totalChunks, updateProgress, resumedUploadId, resumedCompletedChunks);
     } else {
       await directUpload(file, updateProgress);
     }
     updateProgress(100, '上传完成', true);
     showToast(`${file.name} 上传成功`, 'success');
+    // 上传成功,清除续传记录
+    if (isChunked) clearResumeInfo(file);
   } catch (err) {
     updateProgress(0, '失败: ' + err.message, false, true);
     showToast(`${file.name} 上传失败: ${err.message}`, 'error');
@@ -1125,23 +1159,87 @@ async function uploadFile(file) {
   }, 3000);
 }
 
-async function chunkedUpload(file, totalChunks, updateProgress) {
-  // Step 1: 初始化
-  updateProgress(0, '初始化上传...');
-  let formData = new FormData();
-  formData.append('originalFileName', file.name);
-  formData.append('originalFileType', file.type || 'application/octet-stream');
-  formData.append('totalChunks', totalChunks);
+// ============================
+// 断点续传: localStorage 管理
+// ============================
+function getResumeInfo(file) {
+  try {
+    const key = `resume_${file.name}_${file.size}`;
+    const data = localStorage.getItem(key);
+    if (!data) return null;
+    const info = JSON.parse(data);
+    // 超过 50 分钟的记录视为过期(后端会话 1 小时过期)
+    if (Date.now() - info.timestamp > 50 * 60 * 1000) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return info;
+  } catch {
+    return null;
+  }
+}
+
+function saveResumeInfo(file, uploadId) {
+  try {
+    const key = `resume_${file.name}_${file.size}`;
+    localStorage.setItem(key, JSON.stringify({
+      uploadId,
+      timestamp: Date.now()
+    }));
+  } catch (e) {
+    console.warn('保存续传信息失败:', e.message);
+  }
+}
+
+function clearResumeInfo(file) {
+  try {
+    const key = `resume_${file.name}_${file.size}`;
+    localStorage.removeItem(key);
+  } catch {}
+}
+
+function cancelResume(fileName) {
+  if (!confirm('取消续传? 将清除该文件的上传进度记录')) return;
+  // 清除所有匹配该文件名的续传记录
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('resume_') && key.includes(fileName)) {
+      localStorage.removeItem(key);
+    }
+  }
+  showToast('已取消续传,重新选择文件将重新上传', 'info');
+}
+
+async function chunkedUpload(file, totalChunks, updateProgress, resumedUploadId = null, completedChunks = []) {
+  // Step 1: 初始化(或复用已有会话)
+  let uploadId;
+  const completedSet = new Set(completedChunks);
   
-  const initResp = await apiFetch(`${API_BASE}/upload?initChunked=true&uploadChannel=telegram`, {
-    method: 'POST', body: formData, headers: getAuthHeaders()
-  });
+  if (resumedUploadId) {
+    // 断点续传: 复用已有的 uploadId
+    uploadId = resumedUploadId;
+    updateProgress((completedSet.size / totalChunks) * 95, `续传中 ${completedSet.size}/${totalChunks}`);
+  } else {
+    // 新上传: 初始化
+    updateProgress(0, '初始化上传...');
+    let formData = new FormData();
+    formData.append('originalFileName', file.name);
+    formData.append('originalFileType', file.type || 'application/octet-stream');
+    formData.append('totalChunks', totalChunks);
+    
+    const initResp = await apiFetch(`${API_BASE}/upload?initChunked=true&uploadChannel=telegram`, {
+      method: 'POST', body: formData, headers: getAuthHeaders()
+    });
+    
+    uploadId = initResp.uploadId;
+  }
   
-  const uploadId = initResp.uploadId;
+  // 保存续传信息到 localStorage
+  saveResumeInfo(file, uploadId);
   
   // Step 2: 逐片上传(并发 2 片,大文件降低并发避免超时)
-  updateProgress(0, `上传中 0/${totalChunks}`);
-  let uploadedCount = 0;
+  let uploadedCount = completedSet.size;
+  updateProgress((uploadedCount / totalChunks) * 95, uploadedCount > 0 ? `上传中 ${uploadedCount}/${totalChunks}` : `上传中 0/${totalChunks}`);
   const concurrency = totalChunks > 100 ? 2 : 3;
   let nextChunk = 0;
   const failedChunks = [];
@@ -1149,6 +1247,12 @@ async function chunkedUpload(file, totalChunks, updateProgress) {
   async function uploadOneChunk() {
     while (nextChunk < totalChunks) {
       const chunkIndex = nextChunk++;
+      
+      // 断点续传: 跳过已完成的分片
+      if (completedSet.has(chunkIndex)) {
+        continue;
+      }
+      
       const start = chunkIndex * CHUNK_SIZE;
       const end = Math.min(start + CHUNK_SIZE, file.size);
       const chunkBlob = file.slice(start, end);
