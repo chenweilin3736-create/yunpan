@@ -86,7 +86,7 @@ async function authentication(context) {
     env: context.env,
     request: context.request,
     requiredPermission,
-    authScope: AUTH_SCOPE.ADMIN,
+    authScope: AUTH_SCOPE.EITHER,
   });
 
   if (!result.authorized) {
