@@ -97,6 +97,9 @@ export async function onRequest(context) {
         }
     }
 
+    // 检查是否为软删除（移入回收站）模式
+    const trashMode = url.searchParams.get('trash') === 'true';
+
     // 单个文件删除处理
     try {
         // 解码params.path
@@ -104,17 +107,28 @@ export async function onRequest(context) {
         const fileId = params.path.split(',').join('/');
         const cdnUrl = `https://${url.hostname}/file/${fileId}`;
 
-        const success = await deleteFile(env, fileId, cdnUrl, url);
-        if (!success) {
-            throw new Error('Delete file failed');
+        if (trashMode) {
+            // 软删除：移入回收站，不删除存储后端的实际文件
+            const success = await moveToTrash(env, fileId);
+            if (!success) {
+                throw new Error('Move to trash failed');
+            } else {
+                waitUntil(removeFileFromIndex(context, fileId));
+            }
         } else {
-            // 从索引中删除文件
-            waitUntil(removeFileFromIndex(context, fileId));
+            const success = await deleteFile(env, fileId, cdnUrl, url);
+            if (!success) {
+                throw new Error('Delete file failed');
+            } else {
+                // 从索引中删除文件
+                waitUntil(removeFileFromIndex(context, fileId));
+            }
         }
 
         return new Response(JSON.stringify({
             success: true,
-            fileId: fileId
+            fileId: fileId,
+            trashed: trashMode
         }), {
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
@@ -292,6 +306,38 @@ async function deleteWebDAVFile(env, img) {
         return await webdavAPI.deleteFile(filePath);
     } catch (error) {
         console.error("WebDAV Delete Failed:", error);
+        return false;
+    }
+}
+
+// 软删除：将文件移入回收站（不删除存储后端数据）
+async function moveToTrash(env, fileId) {
+    try {
+        const db = getDatabase(env);
+        const img = await db.getWithMetadata(fileId);
+
+        if (!img) {
+            console.warn(`File ${fileId} not found, skipping trash`);
+            return true;
+        }
+
+        // 构造回收站记录
+        const trashKey = `trash_${fileId}`;
+        const trashMetadata = {
+            ...img.metadata,
+            trashTime: Date.now(),
+            originalPath: fileId,
+        };
+
+        // 保存到回收站（保留原始 value 和 metadata）
+        await db.put(trashKey, img.value, { metadata: trashMetadata });
+
+        // 删除原始记录（但不删除存储后端文件）
+        await db.delete(fileId);
+
+        return true;
+    } catch (e) {
+        console.error('Move to trash failed:', e);
         return false;
     }
 }

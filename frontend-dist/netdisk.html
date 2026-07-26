@@ -413,6 +413,107 @@ body {
 /* ===== Hidden ===== */
 .hidden { display: none !important; }
 
+/* ===== Batch Operations ===== */
+.batch-toolbar {
+  display: none;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.6rem 1rem;
+  background: var(--accent-light);
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+.batch-toolbar.show { display: flex; }
+.batch-count { font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+.file-checkbox {
+  width: 18px; height: 18px;
+  cursor: pointer;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+.file-card .file-checkbox {
+  position: absolute;
+  top: 6px; left: 6px;
+  z-index: 5;
+}
+.batch-select-all-label {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.85rem; cursor: pointer;
+}
+
+/* ===== Recycle Bin ===== */
+.trash-item {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.trash-item-info { flex: 1; min-width: 0; }
+.trash-item-name { font-size: 0.85rem; font-weight: 500; }
+.trash-item-meta { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+/* ===== Context Menu ===== */
+.context-menu {
+  position: fixed;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  z-index: 5000;
+  min-width: 180px;
+  overflow: hidden;
+  display: none;
+}
+.context-menu.show { display: block; }
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.1s;
+}
+.context-menu-item:hover { background: var(--accent-light); }
+.context-menu-item.danger { color: var(--danger); }
+.context-menu-divider { height: 1px; background: var(--rule); margin: 0; }
+
+/* ===== Directory Tree Modal ===== */
+.dir-tree-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+.dir-tree-node {
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background 0.1s;
+}
+.dir-tree-node:hover { background: var(--accent-light); }
+.dir-tree-node.selected { background: var(--accent); color: white; }
+.dir-tree-node .indent { display: inline-block; }
+.dir-tree-current {
+  padding: 0.5rem;
+  background: var(--accent-light);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+
 /* ===== Login ===== */
 .login-overlay {
   position: fixed; inset: 0; background: var(--bg);
@@ -476,6 +577,9 @@ body {
       <div class="nav-item" data-view="shares">
         <span class="nav-icon">🔗</span>分享管理
       </div>
+      <div class="nav-item" data-view="trash">
+        <span class="nav-icon">🗑️</span>回收站
+      </div>
     </div>
     <div class="nav-section">
       <div class="nav-title">上传</div>
@@ -514,6 +618,10 @@ body {
       <div id="filesView">
         <div class="toolbar">
           <button class="btn btn-outline btn-sm" onclick="goBack()" id="backBtn">← 返回</button>
+          <label class="batch-select-all-label">
+            <input type="checkbox" class="file-checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)">
+            <span>全选</span>
+          </label>
           <div class="toolbar-spacer"></div>
           <select class="sort-select" id="sortBy" onchange="loadFiles()">
             <option value="">默认排序</option>
@@ -526,6 +634,16 @@ body {
             <option value="asc">升序</option>
           </select>
           <button class="btn-icon" onclick="toggleView()" id="viewToggle" title="切换视图">⊞</button>
+        </div>
+        <!-- Batch Toolbar -->
+        <div class="batch-toolbar" id="batchToolbar">
+          <span class="batch-count" id="batchCount">已选 0 项</span>
+          <button class="btn btn-outline btn-sm" onclick="batchMove()">📂 移动</button>
+          <button class="btn btn-outline btn-sm" onclick="batchCopy()">📋 复制</button>
+          <button class="btn btn-outline btn-sm" onclick="batchShare()">🔗 分享</button>
+          <button class="btn btn-danger btn-sm" onclick="batchDelete()">🗑️ 删除</button>
+          <div class="toolbar-spacer"></div>
+          <button class="btn btn-outline btn-sm" onclick="clearBatchSelection()">取消选择</button>
         </div>
         <div id="fileListContainer"></div>
       </div>
@@ -552,6 +670,16 @@ body {
         </div>
         <div id="sharesContainer"></div>
       </div>
+
+      <!-- Trash View -->
+      <div id="trashView" class="hidden">
+        <div class="toolbar">
+          <h3 style="font-weight:600;">回收站</h3>
+          <div class="toolbar-spacer"></div>
+          <button class="btn btn-danger btn-sm" onclick="emptyTrash()" id="emptyTrashBtn">清空回收站</button>
+        </div>
+        <div id="trashContainer"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -564,6 +692,9 @@ body {
     <div class="modal-footer" id="modalFooter"></div>
   </div>
 </div>
+
+<!-- Context Menu -->
+<div class="context-menu" id="contextMenu"></div>
 
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
@@ -579,6 +710,10 @@ let currentView = 'files';
 let viewMode = 'grid'; // grid | list
 let shareContext = null; // 用于分享弹窗的上下文
 let isLoggedIn = false; // 登录状态
+let selectedFiles = new Set(); // 批量选择的文件ID集合
+let moveContext = null; // 移动/复制操作的上下文
+let lastRenderedFiles = []; // 最近渲染的文件列表（供批量操作使用）
+let lastRenderedDirs = []; // 最近渲染的目录列表
 
 // ============================
 // 工具函数
@@ -740,10 +875,15 @@ function showView(view) {
   document.getElementById('filesView').classList.add('hidden');
   document.getElementById('uploadView').classList.add('hidden');
   document.getElementById('sharesView').classList.add('hidden');
+  document.getElementById('trashView').classList.add('hidden');
   document.getElementById(view + 'View').classList.remove('hidden');
+  
+  // 清除批量选择状态
+  clearBatchSelection();
   
   if (view === 'files') loadFiles();
   if (view === 'shares') loadShares();
+  if (view === 'trash') loadTrash();
 }
 
 function showUploadView() {
@@ -820,8 +960,12 @@ function renderFiles(data) {
   const files = data.files || [];
   const directories = data.directories || [];
   
+  lastRenderedFiles = files;
+  lastRenderedDirs = directories;
+  
   if (files.length === 0 && directories.length === 0) {
     container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>此文件夹为空</div></div>';
+    updateBatchToolbar();
     return;
   }
   
@@ -829,7 +973,11 @@ function renderFiles(data) {
     let html = '<div class="file-grid">';
     directories.forEach(dir => {
       const dirName = dir.split('/').filter(p => p).pop();
-      html += `<div class="file-card" onclick="enterDir('${encodeURIComponent(dir)}')">
+      const dirEncoded = encodeURIComponent(dir);
+      html += `<div class="file-card" onclick="enterDir('${dirEncoded}')" oncontextmenu="event.preventDefault();showDirContextMenu(event,'${dirEncoded}','${escapeHtml(dirName)}')">
+        <div class="file-actions">
+          <button class="btn-icon" onclick="event.stopPropagation();showDirContextMenu(event,'${dirEncoded}','${escapeHtml(dirName)}')" title="更多">⋯</button>
+        </div>
         <div class="file-icon">📁</div>
         <div class="file-name">${escapeHtml(dirName)}</div>
         <div class="file-meta">文件夹</div>
@@ -848,11 +996,14 @@ function renderFiles(data) {
         ? `<div class="file-thumb" style="background-image:url('${thumbUrl}')"></div>`
         : `<div class="file-icon">${getFileIcon(name, fileType)}</div>`;
       const clickAction = isImage ? `previewFile('${fileId}', '${escapeHtml(name)}')` : `showFileMenu('${fileId}', '${escapeHtml(name)}')`;
-      html += `<div class="file-card" onclick="${clickAction}">
+      const isSelected = selectedFiles.has(file.name || file.id) ? 'selected' : '';
+      const checked = selectedFiles.has(file.name || file.id) ? 'checked' : '';
+      html += `<div class="file-card ${isSelected}" onclick="${clickAction}" oncontextmenu="event.preventDefault();showFileContextMenu(event,'${fileId}','${escapeHtml(name)}')">
+        <input type="checkbox" class="file-checkbox" ${checked} onclick="event.stopPropagation();toggleFileSelection('${file.name || file.id}')">
         <div class="file-actions">
           <button class="btn-icon" onclick="event.stopPropagation();downloadFile('${fileId}')" title="下载">⬇️</button>
           <button class="btn-icon" onclick="event.stopPropagation();showShareModal('${fileId}', '${escapeHtml(name)}')" title="分享">🔗</button>
-          <button class="btn-icon" onclick="event.stopPropagation();deleteFile('${fileId}', '${escapeHtml(name)}')" title="删除">🗑️</button>
+          <button class="btn-icon" onclick="event.stopPropagation();showFileContextMenu(event,'${fileId}','${escapeHtml(name)}')" title="更多">⋯</button>
         </div>
         ${iconHtml}
         <div class="file-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
@@ -862,13 +1013,17 @@ function renderFiles(data) {
     html += '</div>';
     container.innerHTML = html;
   } else {
-    let html = '<table class="file-table"><thead><tr><th>名称</th><th>大小</th><th>修改时间</th><th>操作</th></tr></thead><tbody>';
+    let html = '<table class="file-table"><thead><tr><th style="width:30px"></th><th>名称</th><th>大小</th><th>修改时间</th><th>操作</th></tr></thead><tbody>';
     directories.forEach(dir => {
       const dirName = dir.split('/').filter(p => p).pop();
-      html += `<tr onclick="enterDir('${encodeURIComponent(dir)}')">
+      const dirEncoded = encodeURIComponent(dir);
+      html += `<tr onclick="enterDir('${dirEncoded}')" oncontextmenu="event.preventDefault();showDirContextMenu(event,'${dirEncoded}','${escapeHtml(dirName)}')">
+        <td></td>
         <td class="col-name"><span class="col-icon">📁</span>${escapeHtml(dirName)}</td>
         <td>-</td><td>-</td>
-        <td class="col-actions"></td>
+        <td class="col-actions">
+          <button class="btn-icon" onclick="event.stopPropagation();showDirContextMenu(event,'${dirEncoded}','${escapeHtml(dirName)}')" title="更多">⋯</button>
+        </td>
       </tr>`;
     });
     files.forEach(file => {
@@ -880,19 +1035,22 @@ function renderFiles(data) {
       const fileType = meta.FileType || '';
       const isImage = fileType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name);
       const nameClickAction = isImage ? `previewFile('${fileId}', '${escapeHtml(name)}')` : `downloadFile('${fileId}')`;
-      html += `<tr>
+      const checked = selectedFiles.has(file.name || file.id) ? 'checked' : '';
+      html += `<tr oncontextmenu="event.preventDefault();showFileContextMenu(event,'${fileId}','${escapeHtml(name)}')">
+        <td><input type="checkbox" class="file-checkbox" ${checked} onclick="event.stopPropagation();toggleFileSelection('${file.name || file.id}')"></td>
         <td class="col-name"><span class="col-icon">${getFileIcon(name, fileType)}</span><span onclick="${nameClickAction}" style="cursor:pointer">${escapeHtml(name)}</span></td>
         <td>${size}</td><td>${time}</td>
         <td class="col-actions">
           <button class="btn-icon" onclick="downloadFile('${fileId}')" title="下载">⬇️</button>
           <button class="btn-icon" onclick="showShareModal('${fileId}', '${escapeHtml(name)}')" title="分享">🔗</button>
-          <button class="btn-icon" onclick="deleteFile('${fileId}', '${escapeHtml(name)}')" title="删除">🗑️</button>
+          <button class="btn-icon" onclick="showFileContextMenu(event,'${fileId}','${escapeHtml(name)}')" title="更多">⋯</button>
         </td>
       </tr>`;
     });
     html += '</tbody></table>';
     container.innerHTML = html;
   }
+  updateBatchToolbar();
 }
 
 function enterDir(dirEncoded) {
@@ -978,13 +1136,27 @@ function previewFile(fileIdEncoded, fileName) {
 }
 
 async function deleteFile(fileIdEncoded, fileName) {
-  if (!confirm(`确定删除 "${fileName}" 吗?`)) return;
+  if (!confirm(`确定删除 "${fileName}" 吗?\n文件将移入回收站,可在回收站恢复。`)) return;
+  try {
+    await apiFetch(`${API_BASE}/api/manage/delete/${fileIdEncoded}?trash=true`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    showToast('已移入回收站', 'success');
+    loadFiles();
+  } catch (err) {
+    showToast('删除失败: ' + err.message, 'error');
+  }
+}
+
+async function deleteFilePermanent(fileIdEncoded, fileName) {
+  if (!confirm(`确定彻底删除 "${fileName}" 吗?\n此操作不可恢复!`)) return;
   try {
     await apiFetch(`${API_BASE}/api/manage/delete/${fileIdEncoded}`, {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
-    showToast('删除成功', 'success');
+    showToast('已彻底删除', 'success');
     loadFiles();
   } catch (err) {
     showToast('删除失败: ' + err.message, 'error');
@@ -1001,10 +1173,443 @@ async function showFileMenu(fileIdEncoded, fileName) {
     </div>
   `, [
     { text: '⬇️ 下载', onclick: () => { downloadFile(fileIdEncoded); closeModal(); } },
+    { text: '✏️ 重命名', class: 'btn-outline', onclick: () => { closeModal(); showRenameModal(fileIdEncoded, fileName); } },
+    { text: '📂 移动到', class: 'btn-outline', onclick: () => { closeModal(); showMoveModal([fileId], 'move'); } },
+    { text: '📋 复制到', class: 'btn-outline', onclick: () => { closeModal(); showMoveModal([fileId], 'copy'); } },
     { text: '🔗 创建分享', class: 'btn-outline', onclick: () => { closeModal(); showShareModal(fileIdEncoded, fileName); } },
     { text: '🗑️ 删除', class: 'btn-danger', onclick: () => { closeModal(); deleteFile(fileIdEncoded, fileName); } },
     { text: '取消', class: 'btn-outline', onclick: closeModal }
   ]);
+}
+
+// ============================
+// 右键菜单
+// ============================
+function showFileContextMenu(event, fileIdEncoded, fileName) {
+  const menu = document.getElementById('contextMenu');
+  menu.innerHTML = `
+    <div class="context-menu-item" onclick="hideContextMenu();downloadFile('${fileIdEncoded}')">⬇️ 下载</div>
+    <div class="context-menu-item" onclick="hideContextMenu();showRenameModal('${fileIdEncoded}','${escapeHtml(fileName)}')">✏️ 重命名</div>
+    <div class="context-menu-item" onclick="hideContextMenu();showMoveModal(['${decodeURIComponent(fileIdEncoded)}'],'move')">📂 移动到</div>
+    <div class="context-menu-item" onclick="hideContextMenu();showMoveModal(['${decodeURIComponent(fileIdEncoded)}'],'copy')">📋 复制到</div>
+    <div class="context-menu-item" onclick="hideContextMenu();showShareModal('${fileIdEncoded}','${escapeHtml(fileName)}')">🔗 分享</div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item danger" onclick="hideContextMenu();deleteFile('${fileIdEncoded}','${escapeHtml(fileName)}')">🗑️ 删除</div>
+  `;
+  positionMenu(menu, event);
+}
+
+function showDirContextMenu(event, dirEncoded, dirName) {
+  const menu = document.getElementById('contextMenu');
+  menu.innerHTML = `
+    <div class="context-menu-item" onclick="hideContextMenu();enterDir('${dirEncoded}')">📂 打开</div>
+    <div class="context-menu-item" onclick="hideContextMenu();showMoveDirModal('${dirEncoded}','${escapeHtml(dirName)}')">📂 移动文件夹</div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item danger" onclick="hideContextMenu();deleteDir('${dirEncoded}','${escapeHtml(dirName)}')">🗑️ 删除文件夹</div>
+  `;
+  positionMenu(menu, event);
+}
+
+function positionMenu(menu, event) {
+  menu.classList.add('show');
+  const x = event.clientX || (event.touches && event.touches[0].clientX) || 0;
+  const y = event.clientY || (event.touches && event.touches[0].clientY) || 0;
+  const rect = menu.getBoundingClientRect();
+  const maxX = window.innerWidth - rect.width - 10;
+  const maxY = window.innerHeight - rect.height - 10;
+  menu.style.left = Math.min(x, maxX) + 'px';
+  menu.style.top = Math.min(y, maxY) + 'px';
+}
+
+function hideContextMenu() {
+  document.getElementById('contextMenu').classList.remove('show');
+}
+
+document.addEventListener('click', () => hideContextMenu());
+
+// ============================
+// 重命名
+// ============================
+function showRenameModal(fileIdEncoded, fileName) {
+  const fileId = decodeURIComponent(fileIdEncoded);
+  const dirPath = fileId.includes('/') ? fileId.substring(0, fileId.lastIndexOf('/') + 1) : '';
+  const currentName = fileId.split('/').pop();
+  
+  showModal('重命名', `
+    <div style="text-align:center;margin-bottom:1rem">
+      <div style="font-size:2rem">${getFileIcon(fileName)}</div>
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">新文件名</label>
+      <input type="text" class="modal-input" id="renameInput" value="${escapeHtml(currentName)}" autofocus>
+    </div>
+    ${dirPath ? `<div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.5rem">所在目录: ${escapeHtml(dirPath)}</div>` : ''}
+  `, [
+    { text: '取消', class: 'btn-outline', onclick: closeModal },
+    { text: '确认重命名', class: 'btn-primary', onclick: () => doRename(fileId, dirPath) }
+  ]);
+  setTimeout(() => {
+    const input = document.getElementById('renameInput');
+    if (input) { input.focus(); input.select(); }
+  }, 100);
+}
+
+async function doRename(fileId, dirPath) {
+  const newName = document.getElementById('renameInput').value.trim();
+  if (!newName) { showToast('请输入新文件名', 'warning'); return; }
+  
+  const newFileId = dirPath ? dirPath + newName : newName;
+  if (newFileId === fileId) { closeModal(); return; }
+  
+  closeModal();
+  
+  try {
+    await apiFetch(`${API_BASE}/api/manage/rename/${encodeURIComponent(fileId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ newFileId })
+    });
+    showToast('重命名成功', 'success');
+    loadFiles();
+  } catch (err) {
+    showToast('重命名失败: ' + err.message, 'error');
+  }
+}
+
+// ============================
+// 移动/复制
+// ============================
+function showMoveModal(fileIds, mode) {
+  moveContext = { fileIds, mode };
+  const title = mode === 'copy' ? '复制到文件夹' : '移动到文件夹';
+  
+  showModal(title, `
+    <div class="dir-tree-current" id="moveCurrentDir">当前目录: <span id="moveSelectedDir">/ (根目录)</span></div>
+    <div class="dir-tree-container" id="dirTreeContainer">
+      <div style="text-align:center;padding:1rem;color:var(--muted)">加载目录树...</div>
+    </div>
+  `, [
+    { text: '取消', class: 'btn-outline', onclick: closeModal },
+    { text: mode === 'copy' ? '📋 复制' : '📂 移动', class: 'btn-primary', onclick: doMoveOrCopy }
+  ]);
+  
+  loadDirTree('');
+}
+
+function showMoveDirModal(dirEncoded, dirName) {
+  const dirPath = decodeURIComponent(dirEncoded);
+  showMoveModal([dirPath + '/'], 'move');
+}
+
+async function loadDirTree(selectedPath) {
+  try {
+    const data = await apiFetch(`${API_BASE}/api/directoryTree`, { headers: getAuthHeaders() });
+    const container = document.getElementById('dirTreeContainer');
+    if (!container) return;
+    
+    let html = `<div class="dir-tree-node" onclick="selectMoveDir('')" data-path="">
+      <span>📁</span><span>根目录</span>
+    </div>`;
+    
+    function renderTree(node, depth) {
+      if (!node || !node.children) return '';
+      let result = '';
+      for (const child of node.children) {
+        const padding = 'margin-left:' + (depth * 20) + 'px';
+        const name = child.name || child.path?.split('/').pop();
+        const path = child.path || '';
+        result += `<div class="dir-tree-node" style="${padding}" onclick="selectMoveDir('${encodeURIComponent(path)}')" data-path="${escapeHtml(path)}">
+          <span>📁</span><span>${escapeHtml(name)}</span>
+        </div>`;
+        if (child.children && child.children.length > 0) {
+          result += renderTree(child, depth + 1);
+        }
+      }
+      return result;
+    }
+    
+    if (data.tree) {
+      html += renderTree(data.tree, 0);
+    }
+    
+    container.innerHTML = html;
+  } catch (err) {
+    const container = document.getElementById('dirTreeContainer');
+    if (container) container.innerHTML = `<div style="color:var(--danger);padding:1rem">加载失败: ${err.message}</div>`;
+  }
+}
+
+function selectMoveDir(pathEncoded) {
+  const path = decodeURIComponent(pathEncoded);
+  moveContext.targetDir = path;
+  document.getElementById('moveSelectedDir').textContent = path || '/ (根目录)';
+  
+  // 高亮选中
+  document.querySelectorAll('.dir-tree-node').forEach(n => n.classList.remove('selected'));
+  event?.target?.closest('.dir-tree-node')?.classList.add('selected');
+}
+
+async function doMoveOrCopy() {
+  if (!moveContext || !moveContext.fileIds) return;
+  const targetDir = moveContext.targetDir || '';
+  const mode = moveContext.mode;
+  const fileIds = moveContext.fileIds;
+  
+  closeModal();
+  
+  let successCount = 0;
+  let failCount = 0;
+  
+  for (const fileId of fileIds) {
+    try {
+      const fileName = fileId.split('/').pop();
+      const newFileId = targetDir ? `${targetDir}/${fileName}` : fileName;
+      
+      if (mode === 'copy') {
+        await apiFetch(`${API_BASE}/api/manage/copy/${encodeURIComponent(fileId)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ targetDir })
+        });
+      } else {
+        await apiFetch(`${API_BASE}/api/manage/move/${encodeURIComponent(fileId)}?dist=${encodeURIComponent(targetDir)}`, {
+          headers: getAuthHeaders()
+        });
+      }
+      successCount++;
+    } catch (err) {
+      console.error(`Failed to ${mode} ${fileId}:`, err);
+      failCount++;
+    }
+  }
+  
+  if (failCount === 0) {
+    showToast(`${mode === 'copy' ? '复制' : '移动'}成功 ${successCount} 项`, 'success');
+  } else if (successCount > 0) {
+    showToast(`${mode === 'copy' ? '复制' : '移动'} ${successCount} 项成功, ${failCount} 项失败`, 'warning');
+  } else {
+    showToast(`${mode === 'copy' ? '复制' : '移动'}失败: ${failCount} 项`, 'error');
+  }
+  
+  if (mode === 'move') loadFiles();
+}
+
+async function deleteDir(dirEncoded, dirName) {
+  if (!confirm(`确定删除文件夹 "${dirName}" 及其中所有文件吗?\n文件将移入回收站。`)) return;
+  try {
+    await apiFetch(`${API_BASE}/api/manage/delete/${dirEncoded}?folder=true&trash=true`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    showToast('文件夹已移入回收站', 'success');
+    loadFiles();
+  } catch (err) {
+    showToast('删除失败: ' + err.message, 'error');
+  }
+}
+
+// ============================
+// 批量操作
+// ============================
+function toggleFileSelection(fileId) {
+  if (selectedFiles.has(fileId)) {
+    selectedFiles.delete(fileId);
+  } else {
+    selectedFiles.add(fileId);
+  }
+  updateBatchToolbar();
+  // 更新全选复选框状态
+  const allFileIds = lastRenderedFiles.map(f => f.name || f.id);
+  const allSelected = allFileIds.length > 0 && allFileIds.every(id => selectedFiles.has(id));
+  const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+  if (selectAllCheckbox) selectAllCheckbox.checked = allSelected;
+}
+
+function toggleSelectAll(checked) {
+  const allFileIds = lastRenderedFiles.map(f => f.name || f.id);
+  if (checked) {
+    allFileIds.forEach(id => selectedFiles.add(id));
+  } else {
+    allFileIds.forEach(id => selectedFiles.delete(id));
+  }
+  loadFiles(); // 重新渲染以更新复选框状态
+}
+
+function updateBatchToolbar() {
+  const toolbar = document.getElementById('batchToolbar');
+  const countEl = document.getElementById('batchCount');
+  if (!toolbar || !countEl) return;
+  
+  const count = selectedFiles.size;
+  if (count > 0) {
+    toolbar.classList.add('show');
+    countEl.textContent = `已选 ${count} 项`;
+  } else {
+    toolbar.classList.remove('show');
+  }
+}
+
+function clearBatchSelection() {
+  selectedFiles.clear();
+  const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+  if (selectAllCheckbox) selectAllCheckbox.checked = false;
+  loadFiles();
+}
+
+function getSelectedFileIds() {
+  return Array.from(selectedFiles);
+}
+
+async function batchDelete() {
+  const fileIds = getSelectedFileIds();
+  if (fileIds.length === 0) return;
+  if (!confirm(`确定删除选中的 ${fileIds.length} 个文件吗?\n文件将移入回收站。`)) return;
+  
+  try {
+    const resp = await apiFetch(`${API_BASE}/api/manage/delete/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ fileIds })
+    });
+    
+    const deleted = resp.deleted || [];
+    const failed = resp.failed || [];
+    
+    if (failed.length === 0) {
+      showToast(`成功删除 ${deleted.length} 个文件`, 'success');
+    } else {
+      showToast(`删除 ${deleted.length} 个成功, ${failed.length} 个失败`, 'warning');
+    }
+    clearBatchSelection();
+    loadFiles();
+  } catch (err) {
+    showToast('批量删除失败: ' + err.message, 'error');
+  }
+}
+
+function batchMove() {
+  const fileIds = getSelectedFileIds();
+  if (fileIds.length === 0) return;
+  showMoveModal(fileIds, 'move');
+}
+
+function batchCopy() {
+  const fileIds = getSelectedFileIds();
+  if (fileIds.length === 0) return;
+  showMoveModal(fileIds, 'copy');
+}
+
+async function batchShare() {
+  const fileIds = getSelectedFileIds();
+  if (fileIds.length === 0) return;
+  if (!confirm(`为选中的 ${fileIds.length} 个文件创建分享链接?`)) return;
+  
+  let successCount = 0;
+  for (const fileId of fileIds) {
+    try {
+      const resp = await apiFetch(`${API_BASE}/api/manage/share/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ fileId })
+      });
+      successCount++;
+    } catch (err) {
+      console.error(`Share failed for ${fileId}:`, err);
+    }
+  }
+  showToast(`成功创建 ${successCount} 个分享链接`, 'success');
+  clearBatchSelection();
+}
+
+// ============================
+// 回收站
+// ============================
+async function loadTrash() {
+  const container = document.getElementById('trashContainer');
+  container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">加载中...</div>';
+  
+  try {
+    const data = await apiFetch(`${API_BASE}/api/manage/trash/`, { headers: getAuthHeaders() });
+    const items = data.items || [];
+    
+    if (items.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🗑️</div><div>回收站为空</div></div>';
+      return;
+    }
+    
+    let html = '';
+    items.forEach(item => {
+      const meta = item.metadata || {};
+      const name = meta.FileName || item.fileId?.split('/').pop() || '未知';
+      const size = meta.FileSizeBytes ? formatSize(parseInt(meta.FileSizeBytes)) : (meta.FileSize ? meta.FileSize + ' MB' : '');
+      const trashTime = formatDate(item.trashTime);
+      const fileIdEncoded = encodeURIComponent(item.fileId);
+      html += `<div class="trash-item">
+        <div style="font-size:1.5rem">${getFileIcon(name)}</div>
+        <div class="trash-item-info">
+          <div class="trash-item-name">${escapeHtml(name)}</div>
+          <div class="trash-item-meta">${size} · 删除于 ${trashTime}</div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="restoreFile('${fileIdEncoded}')" title="恢复">↩️ 恢复</button>
+        <button class="btn btn-danger btn-sm" onclick="permanentDelete('${fileIdEncoded}','${escapeHtml(name)}')" title="彻底删除">🗑️</button>
+      </div>`;
+    });
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>加载失败: ${err.message}</div></div>`;
+  }
+}
+
+async function restoreFile(fileIdEncoded) {
+  try {
+    await apiFetch(`${API_BASE}/api/manage/trash/${fileIdEncoded}`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    showToast('文件已恢复', 'success');
+    loadTrash();
+  } catch (err) {
+    showToast('恢复失败: ' + err.message, 'error');
+  }
+}
+
+async function permanentDelete(fileIdEncoded, fileName) {
+  if (!confirm(`确定彻底删除 "${fileName}" 吗?\n此操作不可恢复!`)) return;
+  try {
+    await apiFetch(`${API_BASE}/api/manage/trash/${fileIdEncoded}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    showToast('已彻底删除', 'success');
+    loadTrash();
+  } catch (err) {
+    showToast('删除失败: ' + err.message, 'error');
+  }
+}
+
+async function emptyTrash() {
+  if (!confirm('确定清空回收站吗?\n所有文件将被彻底删除,此操作不可恢复!')) return;
+  try {
+    const data = await apiFetch(`${API_BASE}/api/manage/trash/`, { headers: getAuthHeaders() });
+    const items = data.items || [];
+    
+    let successCount = 0;
+    for (const item of items) {
+      try {
+        await apiFetch(`${API_BASE}/api/manage/trash/${encodeURIComponent(item.fileId)}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        successCount++;
+      } catch (e) {
+        console.error('Failed to delete:', item.fileId, e);
+      }
+    }
+    showToast(`已清空回收站 (${successCount} 项)`, 'success');
+    loadTrash();
+  } catch (err) {
+    showToast('清空失败: ' + err.message, 'error');
+  }
 }
 
 // ============================
