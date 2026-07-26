@@ -55,6 +55,12 @@ export async function handleChunkMerge(context) {
         const channelName = url.searchParams.get('channelName') || sessionInfo.channelName || '';
         context.specifiedChannelName = channelName;
 
+        // 从前端 formData 读取 uploadFolder 并同步到 URL，供后续 buildUniqueFileId / endUpload 使用
+        const uploadFolder = formdata.get('uploadFolder');
+        if (uploadFolder && typeof uploadFolder === 'string') {
+            url.searchParams.set('uploadFolder', uploadFolder);
+        }
+
         // 检查分块上传状态
         const chunkStatuses = await checkChunkUploadStatuses(env, uploadId, totalChunks);
 

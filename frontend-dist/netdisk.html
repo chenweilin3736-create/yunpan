@@ -1011,13 +1011,22 @@ button, .btn, .btn-icon, .nav-item, .crumb, .file-card, .context-menu-item, .dir
 
       <!-- Upload View -->
       <div id="uploadView" class="hidden">
+        <div style="margin-bottom:0.75rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+          <span style="color:var(--muted);font-size:0.85rem;">上传到:</span>
+          <span id="uploadTargetPath" style="font-size:0.85rem;font-weight:500;color:var(--text);">全部文件</span>
+          <button class="btn btn-outline btn-sm" onclick="showUploadTargetSelector()">修改</button>
+        </div>
         <div class="upload-zone" id="uploadZone">
           <div class="upload-zone-icon">📤</div>
           <div class="upload-zone-text">拖拽文件到此处,或</div>
-          <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">选择文件</button>
+          <div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">选择文件</button>
+            <button class="btn btn-outline" onclick="document.getElementById('folderInput').click()">选择文件夹</button>
+          </div>
           <input type="file" id="fileInput" multiple style="display:none" onchange="handleFileSelect(event)">
+          <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none" onchange="handleFolderSelect(event)">
           <div style="margin-top:0.6rem;font-size:0.78rem;color:var(--muted)">
-            支持大文件分片上传(每片16MB),断点续传,1小时内传完即可
+            支持大文件分片上传(每片16MB),断点续传,上传文件夹会保持目录结构
           </div>
         </div>
         <div class="upload-list" id="uploadList"></div>
@@ -1076,6 +1085,7 @@ let selectedFiles = new Set(); // 批量选择的文件ID集合
 let moveContext = null; // 移动/复制操作的上下文
 let lastRenderedFiles = []; // 最近渲染的文件列表（供批量操作使用）
 let lastRenderedDirs = []; // 最近渲染的目录列表
+let uploadTargetDir = ''; // 上传目标目录（默认跟随 currentDir，可手动修改）
 
 // ============================
 // 工具函数
@@ -1246,10 +1256,44 @@ function showView(view) {
   if (view === 'files') loadFiles();
   if (view === 'shares') loadShares();
   if (view === 'trash') loadTrash();
+  if (view === 'upload') {
+    uploadTargetDir = currentDir;
+    updateUploadTargetDisplay();
+  }
 }
 
 function showUploadView() {
   showView('upload');
+}
+
+function updateUploadTargetDisplay() {
+  const el = document.getElementById('uploadTargetPath');
+  if (!el) return;
+  const text = uploadTargetDir === '' ? '全部文件' : escapeHtml(uploadTargetDir);
+  el.textContent = text;
+}
+
+function showUploadTargetSelector() {
+  const currentTarget = uploadTargetDir === '' ? '全部文件' : uploadTargetDir;
+  showModal('选择目标文件夹', `
+    <div class="modal-field">
+      <label class="modal-label">当前目标</label>
+      <div style="padding:0.6rem 0.8rem;background:var(--accent-light);border-radius:var(--radius);font-size:0.85rem;color:var(--accent);font-weight:500;">${escapeHtml(currentTarget)}</div>
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">路径 (留空为根目录)</label>
+      <input class="modal-input" id="uploadTargetInput" value="${escapeHtml(uploadTargetDir)}" placeholder="例如: docs/2024">
+    </div>
+    <div style="font-size:0.78rem;color:var(--muted);margin-top:0.25rem;">提示: 可以直接输入路径，系统会自动创建不存在的文件夹</div>
+  `, [
+    { text: '取消', class: 'btn-outline', onClick: closeModal },
+    { text: '确定', class: 'btn-primary', onClick: () => {
+      const val = document.getElementById('uploadTargetInput').value.trim();
+      uploadTargetDir = val.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/');
+      updateUploadTargetDisplay();
+      closeModal();
+    }}
+  ]);
 }
 
 // ============================
@@ -2024,21 +2068,49 @@ uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag
 uploadZone.addEventListener('drop', e => {
   e.preventDefault();
   uploadZone.classList.remove('dragover');
-  handleFiles(e.dataTransfer.files);
+  handleFiles(e.dataTransfer.files, uploadTargetDir);
 });
 
 function handleFileSelect(event) {
-  handleFiles(event.target.files);
+  handleFiles(event.target.files, uploadTargetDir);
   event.target.value = ''; // reset
 }
 
-async function handleFiles(fileList) {
-  for (const file of fileList) {
-    await uploadFile(file);
+async function handleFolderSelect(event) {
+  const files = Array.from(event.target.files);
+  event.target.value = ''; // reset
+  if (!files.length) return;
+
+  // 上传文件夹时，根据 webkitRelativePath 保持目录结构
+  // webkitRelativePath 格式: "选中的根文件夹/内部路径/文件名"
+  // 我们去掉根文件夹名，保留内部目录结构，再拼接到 uploadTargetDir
+  const baseTarget = uploadTargetDir;
+
+  for (const file of files) {
+    const relativePath = file.webkitRelativePath || '';
+    let fileTargetDir = baseTarget;
+
+    if (relativePath) {
+      const parts = relativePath.split('/');
+      // 去掉文件名和根文件夹名，保留中间目录结构
+      if (parts.length > 2) {
+        const subDir = parts.slice(1, -1).join('/');
+        fileTargetDir = baseTarget ? `${baseTarget}/${subDir}` : subDir;
+      }
+      // 如果只有根文件夹+文件，则直接上传到 baseTarget
+    }
+
+    await uploadFile(file, fileTargetDir);
   }
 }
 
-async function uploadFile(file) {
+async function handleFiles(fileList, targetDir) {
+  for (const file of fileList) {
+    await uploadFile(file, targetDir);
+  }
+}
+
+async function uploadFile(file, targetDir) {
   const uploadId = `upload-item-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
   const isChunked = file.size > CHUNK_SIZE;
@@ -2103,9 +2175,9 @@ async function uploadFile(file) {
   
   try {
     if (isChunked) {
-      await chunkedUpload(file, totalChunks, updateProgress, resumedUploadId, resumedCompletedChunks);
+      await chunkedUpload(file, totalChunks, updateProgress, resumedUploadId, resumedCompletedChunks, targetDir);
     } else {
-      await directUpload(file, updateProgress);
+      await directUpload(file, updateProgress, targetDir);
     }
     updateProgress(100, '上传完成', true);
     showToast(`${file.name} 上传成功`, 'success');
@@ -2177,7 +2249,8 @@ function cancelResume(fileName) {
   showToast('已取消续传,重新选择文件将重新上传', 'info');
 }
 
-async function chunkedUpload(file, totalChunks, updateProgress, resumedUploadId = null, completedChunks = []) {
+async function chunkedUpload(file, totalChunks, updateProgress, resumedUploadId = null, completedChunks = [], targetDir = null) {
+  const effectiveDir = targetDir !== null ? targetDir : currentDir;
   // Step 1: 初始化(或复用已有会话)
   let uploadId;
   const completedSet = new Set(completedChunks);
@@ -2346,8 +2419,8 @@ async function chunkedUpload(file, totalChunks, updateProgress, resumedUploadId 
   
   // 上传目录
   let mergeUrl = `${API_BASE}/upload?chunked=true&merge=true&uploadChannel=telegram&uploadNameType=origin`;
-  if (currentDir) {
-    mergeFormData.append('uploadFolder', currentDir);
+  if (effectiveDir) {
+    mergeFormData.append('uploadFolder', effectiveDir);
   }
   
   // 合并请求也可能超时,加重试
@@ -2370,13 +2443,14 @@ async function chunkedUpload(file, totalChunks, updateProgress, resumedUploadId 
   updateProgress(99, '完成');
 }
 
-async function directUpload(file, updateProgress) {
+async function directUpload(file, updateProgress, targetDir = null) {
+  const effectiveDir = targetDir !== null ? targetDir : currentDir;
   updateProgress(0, '上传中...');
   const formData = new FormData();
   formData.append('file', file);
   
   let url = `${API_BASE}/upload?uploadNameType=origin&uploadChannel=telegram`;
-  if (currentDir) url += `&uploadFolder=${encodeURIComponent(currentDir)}`;
+  if (effectiveDir) url += `&uploadFolder=${encodeURIComponent(effectiveDir)}`;
   
   // 使用 XMLHttpRequest 跟踪进度
   return new Promise((resolve, reject) => {
