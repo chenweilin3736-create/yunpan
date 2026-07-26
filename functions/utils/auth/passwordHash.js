@@ -203,3 +203,113 @@ export async function rehashIfNeeded(db, plainPassword, storedPassword, configPa
         console.error(`Failed to rehash password at ${configPath}:`, e);
     }
 }
+
+// ==================== 密码强度校验 ====================
+
+/**
+ * 常见弱密码列表
+ */
+const COMMON_WEAK_PASSWORDS = [
+    'password', '123456', '12345678', 'qwerty', 'abc123', 'monkey', '1234567',
+    'letmein', 'trustno1', 'dragon', 'baseball', 'iloveyou', 'master', 'sunshine',
+    'ashley', 'bailey', 'shadow', '123123', '654321', 'superman', 'qazwsx',
+    'michael', 'football', 'password1', 'password123', 'admin', 'admin123',
+    'root', 'toor', 'pass', '1234', '12345', '111111', '000000', '666666',
+    '888888', 'abcdef', 'abcabc', 'aaa', 'aaaa', 'qwerty123', 'welcome',
+    'login', 'starwars', 'hello', 'freedom', 'whatever', 'test', 'guest'
+];
+
+/**
+ * 密码强度校验
+ * 检查密码是否符合安全要求，返回强度等级和改进建议
+ * @param {string} password - 待校验的明文密码
+ * @param {Object} [options] - 校验选项
+ * @param {number} [options.minLength=8] - 最小长度
+ * @param {number} [options.minTypes=3] - 最少字符类型数（大写、小写、数字、特殊字符）
+ * @returns {{valid: boolean, score: number, level: string, message: string, suggestions: string[]}}
+ */
+export function validatePasswordStrength(password, options = {}) {
+    const minLength = options.minLength ?? 8;
+    const minTypes = options.minTypes ?? 3;
+
+    if (!password || typeof password !== 'string') {
+        return {
+            valid: false,
+            score: 0,
+            level: 'weak',
+            message: '密码不能为空',
+            suggestions: ['请输入密码']
+        };
+    }
+
+    const suggestions = [];
+
+    // 长度检查
+    if (password.length < minLength) {
+        suggestions.push(`密码长度至少 ${minLength} 位`);
+    }
+
+    // 字符类型检查
+    const hasLower = /[a-z]/.test(password);
+    const hasUpper = /[A-Z]/.test(password);
+    const hasDigit = /\d/.test(password);
+    const hasSpecial = /[^a-zA-Z0-9]/.test(password);
+
+    const typeCount = [hasLower, hasUpper, hasDigit, hasSpecial].filter(Boolean).length;
+
+    if (!hasLower) suggestions.push('添加小写字母 (a-z)');
+    if (!hasUpper) suggestions.push('添加大写字母 (A-Z)');
+    if (!hasDigit) suggestions.push('添加数字 (0-9)');
+    if (!hasSpecial) suggestions.push('添加特殊字符 (!@#$%^&*)');
+
+    if (typeCount < minTypes) {
+        suggestions.push(`至少包含 ${minTypes} 种字符类型`);
+    }
+
+    // 常见弱密码检查
+    const lowerPassword = password.toLowerCase();
+    if (COMMON_WEAK_PASSWORDS.includes(lowerPassword)) {
+        return {
+            valid: false,
+            score: 0,
+            level: 'weak',
+            message: '密码过于简单，属于常见弱密码',
+            suggestions: ['请避免使用常见弱密码，如 password、123456 等']
+        };
+    }
+
+    // 连续/重复字符检查
+    if (/(.)\1{2,}/.test(password)) {
+        suggestions.push('避免使用连续重复字符（如 aaa、111）');
+    }
+    if (/(?:0123|1234|2345|3456|4567|5678|6789|abcd|bcde|cdef|qwer|asdf|zxcv)/i.test(password)) {
+        suggestions.push('避免使用连续字符序列（如 1234、abcd）');
+    }
+
+    // 计算强度分数 (0-4)
+    let score = 0;
+    if (password.length >= minLength) score++;
+    if (password.length >= 12) score++;
+    if (typeCount >= 3) score++;
+    if (typeCount >= 4 && password.length >= 10) score++;
+
+    // 基本要求校验
+    const valid = password.length >= minLength && typeCount >= minTypes;
+
+    const levels = ['weak', 'weak', 'fair', 'good', 'strong'];
+    const messages = [
+        '密码强度：弱',
+        '密码强度：弱',
+        '密码强度：中等',
+        '密码强度：良好',
+        '密码强度：强'
+    ];
+
+    return {
+        valid,
+        score,
+        level: levels[score],
+        message: valid ? messages[score] : '密码不符合安全要求',
+        suggestions: suggestions.length > 0 ? suggestions : ['密码强度合格']
+    };
+}

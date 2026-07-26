@@ -1,5 +1,5 @@
 import { getDatabase } from '../../../utils/databaseAdapter.js';
-import { hashPassword, isHashed } from '../../../utils/auth/passwordHash.js';
+import { hashPassword, isHashed, validatePasswordStrength } from '../../../utils/auth/passwordHash.js';
 import { destroySessionsByAuthType } from '../../../utils/auth/sessionManager.js';
 import { normalizeSessionMaxAgeDays } from '../../../utils/auth/sessionConfig.js';
 
@@ -91,11 +91,25 @@ export async function onRequest(context) {
             }
         }
 
-        // 对密码进行哈希处理（如果是新的明文密码）
+        // 对密码进行哈希处理（如果是新的明文密码），同时校验密码强度
         if (settings.auth.user?.authCode && !isHashed(settings.auth.user.authCode)) {
+            const strengthCheck = validatePasswordStrength(settings.auth.user.authCode);
+            if (!strengthCheck.valid) {
+                return new Response(JSON.stringify({
+                    error: strengthCheck.message,
+                    suggestions: strengthCheck.suggestions,
+                }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+            }
             settings.auth.user.authCode = await hashPassword(settings.auth.user.authCode);
         }
         if (settings.auth.admin?.adminPassword && !isHashed(settings.auth.admin.adminPassword)) {
+            const strengthCheck = validatePasswordStrength(settings.auth.admin.adminPassword);
+            if (!strengthCheck.valid) {
+                return new Response(JSON.stringify({
+                    error: strengthCheck.message,
+                    suggestions: strengthCheck.suggestions,
+                }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+            }
             settings.auth.admin.adminPassword = await hashPassword(settings.auth.admin.adminPassword);
         }
 

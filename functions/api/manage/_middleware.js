@@ -81,7 +81,15 @@ async function authentication(context) {
     });
   }
 
-  const pathname = new URL(context.request.url).pathname;
+  const requestUrl = new URL(context.request.url);
+  const pathname = requestUrl.pathname;
+
+  // 2FA 验证端点使用 challenge token 认证，不需要 session
+  // 仅当 action=verify 作为查询参数传递时跳过认证
+  if (pathname.startsWith('/api/manage/2fa') && requestUrl.searchParams.get('action') === 'verify') {
+    return context.next();
+  }
+
   const requiredPermission = extractRequiredPermission(pathname);
 
   const result = await authenticate({
@@ -124,7 +132,9 @@ async function authentication(context) {
 
         // 子账号操作权限检查
         const method = context.request.method;
-        if (method === 'DELETE' && !userInfo.permissions?.includes('delete')) {
+        // 会话管理 API 不受删除权限限制（会话销毁不属于文件删除操作）
+        const isSessionMgmt = pathname.startsWith('/api/manage/sessions');
+        if (method === 'DELETE' && !isSessionMgmt && !userInfo.permissions?.includes('delete')) {
           return new Response(JSON.stringify({ error: '权限不足：无删除权限' }), {
             status: 403,
             headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },

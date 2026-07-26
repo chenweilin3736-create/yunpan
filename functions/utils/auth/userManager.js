@@ -3,7 +3,7 @@
  * 提供子账号的 CRUD、密码哈希/验证、权限检查和操作日志功能
  */
 
-import { hashPassword, verifyPassword } from './passwordHash.js';
+import { hashPassword, verifyPassword, validatePasswordStrength } from './passwordHash.js';
 
 // ==================== 常量 ====================
 
@@ -84,8 +84,9 @@ export async function createUser(db, userData) {
         throw new Error('密码不能为空');
     }
 
-    if (password.length < 4) {
-        throw new Error('密码长度不能少于4位');
+    const strengthCheck = validatePasswordStrength(password);
+    if (!strengthCheck.valid) {
+        throw new Error(`${strengthCheck.message}：${strengthCheck.suggestions.join('；')}`);
     }
 
     // 检查用户名是否已存在
@@ -180,8 +181,12 @@ export async function updateUser(db, username, updates) {
 
     // 更新密码
     if (updates.password !== undefined && updates.password !== null && updates.password !== '') {
-        if (typeof updates.password !== 'string' || updates.password.length < 4) {
-            throw new Error('密码长度不能少于4位');
+        if (typeof updates.password !== 'string') {
+            throw new Error('密码格式无效');
+        }
+        const strengthCheck = validatePasswordStrength(updates.password);
+        if (!strengthCheck.valid) {
+            throw new Error(`${strengthCheck.message}：${strengthCheck.suggestions.join('；')}`);
         }
         const { hash, salt } = await hashUserPassword(updates.password);
         user.passwordHash = hash;

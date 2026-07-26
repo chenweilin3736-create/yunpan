@@ -1079,6 +1079,240 @@ button, .btn, .btn-icon, .nav-item, .crumb, .file-card, .context-menu-item, .dir
 
 /* ===== Hidden ===== */
 .hidden { display: none !important; }
+
+/* ===== 密码强度指示器 ===== */
+.password-strength { margin-top: 0.5rem; }
+.password-strength-bar {
+  height: 6px;
+  background: var(--rule);
+  border-radius: 3px;
+  overflow: hidden;
+  transition: background 0.2s;
+}
+.password-strength-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 3px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+.password-strength-fill.weak { background: var(--danger); }
+.password-strength-fill.fair { background: var(--warning); }
+.password-strength-fill.good { background: #eab308; }
+.password-strength-fill.strong { background: var(--success); }
+.password-strength-text {
+  font-size: 0.74rem;
+  margin-top: 0.3rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.password-strength-text.weak { color: var(--danger); }
+.password-strength-text.fair { color: var(--warning); }
+.password-strength-text.good { color: #ca8a04; }
+.password-strength-text.strong { color: var(--success); }
+.password-strength-hints {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 0.3rem;
+  line-height: 1.5;
+}
+
+/* ===== 2FA 安全设置 ===== */
+.security-section { margin-bottom: 1.25rem; }
+.security-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+.security-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.security-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+.security-status-badge.enabled { background: rgba(34,197,94,0.12); color: var(--success); }
+.security-status-badge.disabled { background: rgba(134,134,139,0.12); color: var(--muted); }
+.twofa-secret {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  background: var(--surface-2);
+  border: 1px dashed var(--rule-2);
+  border-radius: var(--radius-xs);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  word-break: break-all;
+  user-select: all;
+  text-align: center;
+  margin: 0.5rem 0;
+}
+.twofa-qr-placeholder {
+  width: 180px;
+  height: 180px;
+  margin: 0.5rem auto;
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: center;
+  padding: 0.5rem;
+  gap: 0.3rem;
+}
+.twofa-qr-placeholder .qr-icon { font-size: 2.4rem; }
+.backup-codes-box {
+  background: rgba(34,197,94,0.06);
+  border: 1px solid rgba(34,197,94,0.3);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  margin: 0.5rem 0;
+}
+.backup-codes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 0.86rem;
+  margin: 0.5rem 0;
+}
+.backup-codes-grid code {
+  background: var(--surface);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-xs);
+  text-align: center;
+  border: 1px solid var(--rule);
+}
+.twofa-tabs {
+  display: flex;
+  gap: 0;
+  margin: 0.5rem 0;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  border: 1px solid var(--rule);
+}
+.twofa-tab {
+  flex: 1;
+  padding: 0.5rem;
+  background: var(--surface-2);
+  color: var(--muted);
+  border: none;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.twofa-tab.active { background: var(--accent); color: #fff; }
+
+/* ===== 在线设备列表 ===== */
+.device-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.device-card:hover { box-shadow: var(--shadow-md); }
+.device-card.current { border-color: var(--accent); background: var(--accent-light); }
+.device-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+.device-info { flex: 1; min-width: 0; }
+.device-title {
+  font-weight: 600;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.device-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.66rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+}
+.device-badge.current { background: var(--accent); color: #fff; }
+.device-badge.remote { background: rgba(245,158,11,0.14); color: var(--warning); }
+.device-meta {
+  font-size: 0.76rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+}
+.device-meta span { display: inline-flex; align-items: center; gap: 0.2rem; }
+.device-actions { flex-shrink: 0; }
+
+/* ===== E2EE 开关 ===== */
+.e2ee-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 26px;
+  flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--rule-2);
+  border-radius: 999px;
+  transition: 0.3s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: 0.3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+.security-desc { font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -1157,6 +1391,9 @@ button, .btn, .btn-icon, .nav-item, .crumb, .file-card, .context-menu-item, .dir
       </div>
       <div class="nav-item" data-view="manage">
         <span class="nav-icon">⚙️</span>系统管理
+      </div>
+      <div class="nav-item" data-view="devices">
+        <span class="nav-icon">📱</span>在线设备
       </div>
     </div>
     <div class="nav-section">
@@ -1327,13 +1564,25 @@ button, .btn, .btn-icon, .nav-item, .crumb, .file-card, .context-menu-item, .dir
           <div class="toolbar-spacer"></div>
         </div>
         <div id="manageContainer" style="max-width:900px">
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem;">
-            <button class="btn btn-primary btn-sm" onclick="showManageTab('overview')">📊 概览</button>
-            <button class="btn btn-outline btn-sm" onclick="showManageTab('users')">👥 用户管理</button>
-            <button class="btn btn-outline btn-sm" onclick="showManageTab('logs')">📋 操作日志</button>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem;" id="manageTabBar">
+            <button class="btn btn-primary btn-sm" id="manageTabOverview" onclick="showManageTab('overview')">📊 概览</button>
+            <button class="btn btn-outline btn-sm" id="manageTabUsers" onclick="showManageTab('users')">👥 用户管理</button>
+            <button class="btn btn-outline btn-sm" id="manageTabLogs" onclick="showManageTab('logs')">📋 操作日志</button>
+            <button class="btn btn-outline btn-sm" id="manageTabSecurity" onclick="showManageTab('security')">🔒 安全设置</button>
           </div>
           <div id="manageContent"></div>
         </div>
+      </div>
+
+      <!-- Devices View -->
+      <div id="devicesView" class="hidden">
+        <div class="toolbar">
+          <h3 style="font-weight:600;">📱 在线设备</h3>
+          <div class="toolbar-spacer"></div>
+          <button class="btn btn-outline btn-sm" onclick="loadDevices()" title="刷新">🔄</button>
+          <button class="btn btn-danger btn-sm" onclick="destroyAllOtherSessions()">🚪 一键下线其他设备</button>
+        </div>
+        <div id="devicesContainer" style="max-width:900px;margin-top:1rem"></div>
       </div>
     </div>
   </div>
@@ -1376,6 +1625,8 @@ let currentCategory = 'image';
 let currentTag = '';
 let allKnownTags = [];
 let manageTab = 'overview';
+let E2EE_ENABLED = false; // 端到端加密开关（基础框架，默认关闭）
+let E2EE_KEY = null; // E2EE 派生密钥（内存中，不持久化）
 
 // ============================
 // 工具函数
@@ -1479,9 +1730,22 @@ async function checkSession() {
 // 根据用户身份隐藏/显示管理功能入口
 function applyUserPermissions() {
   const isAdmin = !currentUserInfo || currentUserInfo.role === 'admin';
-  // 子账号隐藏管理入口
+  // 管理入口对所有用户可见（子账号仅可访问「安全设置」tab）
   const manageNav = document.querySelector('[data-view="manage"]');
-  if (manageNav) manageNav.style.display = isAdmin ? '' : 'none';
+  if (manageNav) {
+    manageNav.style.display = '';
+    // 子账号场景下，导航文字改为「安全设置」更直观
+    manageNav.innerHTML = `<span class="nav-icon">${isAdmin ? '⚙️' : '🔒'}</span>${isAdmin ? '系统管理' : '安全设置'}`;
+  }
+  // 管理面板 tab 按钮：子账号仅显示「安全设置」
+  const tabOverview = document.getElementById('manageTabOverview');
+  const tabUsers = document.getElementById('manageTabUsers');
+  const tabLogs = document.getElementById('manageTabLogs');
+  const tabSecurity = document.getElementById('manageTabSecurity');
+  if (tabOverview) tabOverview.style.display = isAdmin ? '' : 'none';
+  if (tabUsers) tabUsers.style.display = isAdmin ? '' : 'none';
+  if (tabLogs) tabLogs.style.display = isAdmin ? '' : 'none';
+  if (tabSecurity) tabSecurity.style.display = '';
   // 子账号隐藏分享管理入口（可选，根据需求）
   // 子账号如果没有删除权限，隐藏删除按钮
   if (!isAdmin) {
@@ -1517,6 +1781,7 @@ function switchLoginTab(tab) {
 }
 
 // 管理员登录
+let pending2FA = null; // { challenge, username, loginType, loginAlert }
 async function doLogin() {
   const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value.trim();
@@ -1535,22 +1800,48 @@ async function doLogin() {
       body: JSON.stringify({ username, password }),
       credentials: 'include',
     });
+    const data = await resp.json().catch(() => ({}));
+    // 2FA 二次验证
+    if (data && data.requires2FA) {
+      pending2FA = { challenge: data.challenge, username: data.username || username, loginType: 'admin', loginAlert: !!data.loginAlert };
+      show2FAVerifyModal(data.challenge, data.username || username);
+      return;
+    }
     if (resp.ok) {
-      isLoggedIn = true;
-      document.getElementById('loginOverlay').style.display = 'none';
-      loadFiles();
-      loadStorageStats();
-      showToast('登录成功', 'success');
+      onLoggedIn(data, '登录成功');
     } else if (resp.status === 401) {
-      errEl.textContent = '账号或密码错误,请重试';
+      errEl.textContent = data.error || '账号或密码错误,请重试';
     } else {
-      errEl.textContent = `登录失败 (HTTP ${resp.status})`;
+      errEl.textContent = data.error || `登录失败 (HTTP ${resp.status})`;
     }
   } catch (err) {
     errEl.textContent = '网络错误: ' + err.message;
   } finally {
     btn.disabled = false;
     btn.textContent = '登录';
+  }
+}
+
+// 登录成功后的通用处理
+async function onLoggedIn(resp, welcomeMsg) {
+  isLoggedIn = true;
+  document.getElementById('loginOverlay').style.display = 'none';
+  // 获取当前用户信息（子账号场景填充 currentUserInfo）
+  try {
+    const userResp = await apiFetch(`${API_BASE}/api/manage/users?action=self`, { headers: getAuthHeaders() });
+    if (userResp && userResp.user) {
+      currentUserInfo = userResp.user;
+      applyUserPermissions();
+    }
+  } catch {}
+  loadFiles();
+  loadStorageStats();
+  updateBadges();
+  loadTagsNav();
+  if (welcomeMsg) showToast(welcomeMsg, 'success');
+  // 异地登录提醒
+  if (resp && resp.loginAlert) {
+    setTimeout(() => showLoginAlert(), 600);
   }
 }
 
@@ -1573,22 +1864,16 @@ async function doSubLogin() {
       body: JSON.stringify({ username, password }),
       credentials: 'include',
     });
+    const data = await resp.json().catch(() => ({}));
+    // 2FA 二次验证
+    if (data && data.requires2FA) {
+      pending2FA = { challenge: data.challenge, username: data.username || username, loginType: 'sub', loginAlert: !!data.loginAlert };
+      show2FAVerifyModal(data.challenge, data.username || username);
+      return;
+    }
     if (resp.ok) {
-      isLoggedIn = true;
-      document.getElementById('loginOverlay').style.display = 'none';
-      // 获取子账号用户信息
-      try {
-        const userResp = await apiFetch(`${API_BASE}/api/manage/users?action=self`, { headers: getAuthHeaders() });
-        if (userResp && userResp.user) {
-          currentUserInfo = userResp.user;
-          applyUserPermissions();
-        }
-      } catch {}
-      loadFiles();
-      loadStorageStats();
-      showToast(`欢迎, ${currentUserInfo?.displayName || username}`, 'success');
+      onLoggedIn(data, `欢迎, ${data.displayName || username}`);
     } else {
-      const data = await resp.json().catch(() => ({}));
       errEl.textContent = data.error || `登录失败 (HTTP ${resp.status})`;
     }
   } catch (err) {
@@ -1606,6 +1891,10 @@ async function doLogout() {
   } catch {}
   localStorage.removeItem('imgbed_token');
   isLoggedIn = false;
+  currentUserInfo = null;
+  pending2FA = null;
+  E2EE_ENABLED = false;
+  E2EE_KEY = null;
   document.getElementById('loginOverlay').style.display = 'flex';
   document.getElementById('loginUsername').value = '';
   document.getElementById('loginPassword').value = '';
@@ -1637,7 +1926,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 
 function showView(view) {
   currentView = view;
-  ['filesView','uploadView','sharesView','trashView','starredView','categoryView','tagView','manageView'].forEach(id => {
+  ['filesView','uploadView','sharesView','trashView','starredView','categoryView','tagView','manageView','devicesView'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   document.getElementById(view + 'View')?.classList.remove('hidden');
@@ -1651,7 +1940,12 @@ function showView(view) {
   if (view === 'starred') loadStarred();
   if (view === 'category') loadCategory();
   if (view === 'tag') loadTagView();
-  if (view === 'manage') { showManageTab('overview'); }
+  if (view === 'manage') {
+    // 子账号仅可访问安全设置，管理员默认概览
+    const isAdmin = !currentUserInfo || currentUserInfo.role === 'admin';
+    showManageTab(isAdmin ? 'overview' : 'security');
+  }
+  if (view === 'devices') loadDevices();
   if (view === 'upload') {
     uploadTargetDir = currentDir;
     updateUploadTargetDisplay();
@@ -3172,8 +3466,532 @@ document.getElementById('searchInput').addEventListener('input', () => {
 });
 
 // ============================
-// 初始化 - 先检查登录状态
+// 密码强度校验（与后端逻辑一致）
 // ============================
+const COMMON_WEAK_PASSWORDS = [
+  'password','12345678','123456789','11111111','00000000','12341234',
+  'qwerty123','abc12345','password1','iloveyou','admin123','letmein1'
+];
+function checkPasswordStrength(password) {
+  const suggestions = [];
+  if (!password) {
+    return { score: 0, label: '空', valid: false, suggestions: ['请输入密码'] };
+  }
+  // 长度检查
+  if (password.length < 8) {
+    suggestions.push('密码至少 8 位');
+  }
+  // 字符类型统计
+  const types = [
+    /[a-z]/.test(password),     // 小写字母
+    /[A-Z]/.test(password),     // 大写字母
+    /[0-9]/.test(password),     // 数字
+    /[^a-zA-Z0-9]/.test(password) // 特殊符号
+  ].filter(Boolean).length;
+  if (types < 3) {
+    suggestions.push('建议包含大写字母、小写字母、数字、符号中的至少 3 种');
+  }
+  // 常见弱密码
+  if (COMMON_WEAK_PASSWORDS.includes(password.toLowerCase())) {
+    suggestions.push('避免使用常见弱密码');
+  }
+  // 计分
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (types >= 3) score++;
+  if (types >= 4) score++;
+  if (!COMMON_WEAK_PASSWORDS.includes(password.toLowerCase())) score++;
+  // 严重不足时扣分
+  if (password.length < 8) score = Math.min(score, 1);
+  if (types < 2) score = Math.min(score, 1);
+  score = Math.max(0, Math.min(4, score));
+  const valid = password.length >= 8 && types >= 2 && !COMMON_WEAK_PASSWORDS.includes(password.toLowerCase());
+  const labels = ['很弱', '弱', '一般', '良好', '强'];
+  const label = labels[score] || '很弱';
+  return { score, label, valid, suggestions: suggestions.length ? suggestions : ['密码强度合格'] };
+}
+
+function updatePasswordStrength(inputId) {
+  const input = document.getElementById(inputId);
+  const box = document.getElementById('passwordStrengthIndicator');
+  if (!input || !box) return;
+  const pwd = input.value;
+  if (!pwd) { box.innerHTML = ''; return; }
+  const { score, label, valid, suggestions } = checkPasswordStrength(pwd);
+  const cls = ['weak','weak','fair','good','strong'][score] || 'weak';
+  const widthPct = (score === 0 ? 12 : score * 25);
+  const icon = valid ? '✓' : '⚠️';
+  box.innerHTML = `
+    <div class="password-strength">
+      <div class="password-strength-bar"><div class="password-strength-fill ${cls}" style="width:${widthPct}%"></div></div>
+      <div class="password-strength-text ${cls}">${icon} 强度：${label}</div>
+      <div class="password-strength-hints">${suggestions.join('；')}</div>
+    </div>`;
+}
+
+// ============================
+// 2FA 登录二次验证
+// ============================
+function show2FAVerifyModal(challenge, username) {
+  showModal('🔐 两步验证', `
+    <div style="text-align:center;margin-bottom:0.75rem">
+      <div style="font-size:2.2rem">🔐</div>
+      <div style="font-weight:600;margin-top:0.3rem">请输入验证码</div>
+      <div style="font-size:0.8rem;color:var(--muted);margin-top:0.2rem">账号 <b>${escapeHtml(username)}</b> 已启用两步验证</div>
+    </div>
+    <div class="twofa-tabs">
+      <button class="twofa-tab active" id="twofaTabToken" onclick="switch2FATab('token')">验证码</button>
+      <button class="twofa-tab" id="twofaTabBackup" onclick="switch2FATab('backup')">备用码</button>
+    </div>
+    <div class="modal-field" id="twofaTokenField">
+      <label class="modal-label">6 位动态验证码</label>
+      <input class="modal-input" id="twofaTokenInput" inputmode="numeric" maxlength="6" placeholder="123456" style="text-align:center;letter-spacing:0.3em;font-size:1.1rem" onkeydown="if(event.key==='Enter')do2FAVerify('${escapeHtml(challenge)}')">
+    </div>
+    <div class="modal-field hidden" id="twofaBackupField">
+      <label class="modal-label">备用恢复码</label>
+      <input class="modal-input" id="twofaBackupInput" placeholder="输入任一备用码" style="font-family:'SF Mono',monospace" onkeydown="if(event.key==='Enter')do2FAVerify('${escapeHtml(challenge)}')">
+    </div>
+    <div style="font-size:0.76rem;color:var(--muted);text-align:center">请打开验证器 App 获取动态验证码，或使用此前保存的备用恢复码</div>
+  `, [
+    { text: '取消', class: 'btn-outline', onclick: () => { closeModal(); pending2FA = null; } },
+    { text: '验证', class: 'btn-primary', onclick: () => do2FAVerify(challenge) }
+  ]);
+  setTimeout(() => document.getElementById('twofaTokenInput')?.focus(), 100);
+}
+
+function switch2FATab(tab) {
+  const isToken = tab === 'token';
+  document.getElementById('twofaTabToken').classList.toggle('active', isToken);
+  document.getElementById('twofaTabBackup').classList.toggle('active', !isToken);
+  document.getElementById('twofaTokenField').classList.toggle('hidden', !isToken);
+  document.getElementById('twofaBackupField').classList.toggle('hidden', isToken);
+  (isToken ? document.getElementById('twofaTokenInput') : document.getElementById('twofaBackupInput'))?.focus();
+}
+
+async function do2FAVerify(challenge) {
+  const token = document.getElementById('twofaTokenInput')?.value.trim();
+  const backupCode = document.getElementById('twofaBackupInput')?.value.trim();
+  const useBackup = !document.getElementById('twofaBackupField').classList.contains('hidden');
+  if (useBackup) {
+    if (!backupCode) { showToast('请输入备用码', 'warning'); return; }
+  } else {
+    if (!token || token.length !== 6) { showToast('请输入 6 位验证码', 'warning'); return; }
+  }
+  const body = { challenge };
+  if (useBackup) body.backupCode = backupCode; else body.token = token;
+  try {
+    const resp = await apiFetch(`${API_BASE}/api/manage/2fa?action=verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (resp && resp.success) {
+      closeModal();
+      const ctx = pending2FA || {};
+      pending2FA = null;
+      const welcome = ctx.loginType === 'sub'
+        ? `欢迎, ${resp.displayName || ctx.username || ''}`
+        : '登录成功';
+      // 合并 loginAlert（首次登录响应或验证响应都可能携带）
+      const alertFlag = !!(ctx.loginAlert || resp.loginAlert);
+      onLoggedIn({ loginAlert: alertFlag }, welcome);
+    } else {
+      showToast('验证失败，请重试', 'error');
+    }
+  } catch (err) {
+    showToast('验证失败: ' + err.message, 'error');
+  }
+}
+
+// 异地登录提醒
+function showLoginAlert() {
+  showModal('⚠️ 异地登录提醒', `
+    <div style="text-align:center;margin-bottom:0.75rem">
+      <div style="font-size:2.2rem">🌍</div>
+      <div style="font-weight:600;margin-top:0.3rem">检测到一次新的登录</div>
+    </div>
+    <div style="font-size:0.86rem;line-height:1.7;color:var(--ink-2);background:var(--surface-2);padding:0.85rem 1rem;border-radius:var(--radius-xs);border:1px solid var(--rule)">
+      您的账号刚刚在一台设备上完成登录。如果这是您本人的操作，可忽略此提醒；如果不是您本人，建议立即：
+      <ul style="margin:0.5rem 0 0 1.2rem;padding:0">
+        <li>修改账号密码</li>
+        <li>前往「在线设备」查看并下线可疑设备</li>
+        <li>在「安全设置」中开启两步验证（2FA）</li>
+      </ul>
+    </div>
+    <div style="font-size:0.76rem;color:var(--muted);margin-top:0.6rem;text-align:center">可在左侧「在线设备」中管理登录会话</div>
+  `, [
+    { text: '知道了', class: 'btn-primary', onclick: closeModal },
+    { text: '查看在线设备', class: 'btn-outline', onclick: () => { closeModal(); showView('devices'); } }
+  ]);
+}
+
+// ============================
+// 安全设置（2FA + E2EE）
+// ============================
+async function loadSecuritySettings() {
+  const container = document.getElementById('manageContent');
+  container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">加载中...</div>';
+  let twofaStatus = { enabled: false };
+  try {
+    twofaStatus = await apiFetch(`${API_BASE}/api/manage/2fa?action=status`, { headers: getAuthHeaders() });
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>加载失败: ${escapeHtml(err.message)}</div></div>`;
+    return;
+  }
+  const isAdmin = !currentUserInfo || currentUserInfo.role === 'admin';
+  const enabled = !!twofaStatus.enabled;
+  const enabledAt = twofaStatus.enabledAt ? formatDate(twofaStatus.enabledAt) : '';
+  container.innerHTML = `
+    <div class="security-section">
+      <div class="manage-section-title">🔒 账号安全</div>
+      <div class="security-card">
+        <div class="security-card-row">
+          <div>
+            <div style="font-weight:600;font-size:0.92rem;display:flex;align-items:center;gap:0.5rem">
+              两步验证（2FA）
+              <span class="security-status-badge ${enabled ? 'enabled' : 'disabled'}">${enabled ? '● 已开启' : '○ 未开启'}</span>
+            </div>
+            <div class="security-desc">${enabled ? `已于 ${escapeHtml(enabledAt)} 开启。登录时需输入动态验证码。` : '开启后，登录时除密码外还需输入验证器 App 生成的动态验证码，大幅提升账号安全性。'}</div>
+          </div>
+          <div>
+            ${enabled
+              ? '<button class="btn btn-danger btn-sm" onclick="disable2FA()">关闭两步验证</button>'
+              : '<button class="btn btn-primary btn-sm" onclick="setup2FA()">开启两步验证</button>'}
+          </div>
+        </div>
+      </div>
+
+      <div class="security-card">
+        <div class="e2ee-toggle-row">
+          <div>
+            <div style="font-weight:600;font-size:0.92rem;display:flex;align-items:center;gap:0.5rem">
+              端到端加密（E2EE）
+              <span class="security-status-badge ${E2EE_ENABLED ? 'enabled' : 'disabled'}">${E2EE_ENABLED ? '● 已开启' : '○ 未开启'}</span>
+            </div>
+            <div class="security-desc">开启后，上传的文件将在浏览器端使用 AES-GCM 加密后再上传，服务器无法解密文件内容。请妥善保管加密密码，丢失后已加密文件将无法恢复。<br><b style="color:var(--warning)">⚠ 基础框架阶段：开关已就绪，加密上传/下载流程尚未完全集成。</b></div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="e2eeToggle" ${E2EE_ENABLED ? 'checked' : ''} onchange="toggleE2EE(this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="security-card">
+        <div style="font-weight:600;font-size:0.92rem;margin-bottom:0.4rem">📱 在线设备管理</div>
+        <div class="security-desc">查看当前登录的设备会话，可强制下线可疑设备。</div>
+        <div style="margin-top:0.6rem"><button class="btn btn-outline btn-sm" onclick="showView('devices')">查看在线设备 →</button></div>
+      </div>
+    </div>
+  `;
+}
+
+async function setup2FA() {
+  try {
+    const data = await apiFetch(`${API_BASE}/api/manage/2fa?action=setup`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    const secret = data.secret || '';
+    const uri = data.otpauthURI || '';
+    showModal('🔐 开启两步验证', `
+      <div style="text-align:center;margin-bottom:0.5rem">
+        <div style="font-size:0.84rem;color:var(--muted)">1. 使用验证器 App（如 Google Authenticator / Authy）扫描下方二维码，或手动输入密钥</div>
+      </div>
+      <div class="twofa-qr-placeholder">
+        <div class="qr-icon">📱</div>
+        <div>请用验证器 App 扫描</div>
+        <div style="font-size:0.66rem;color:var(--muted);word-break:break-all;margin-top:0.2rem">${escapeHtml(uri)}</div>
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">手动输入密钥</label>
+        <div class="twofa-secret" onclick="navigator.clipboard?.writeText('${escapeHtml(secret)}').then(()=>showToast('已复制','success'))" title="点击复制">${escapeHtml(secret)}</div>
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">2. 输入验证器显示的 6 位验证码完成绑定</label>
+        <input class="modal-input" id="setup2faToken" inputmode="numeric" maxlength="6" placeholder="123456" style="text-align:center;letter-spacing:0.3em;font-size:1.1rem">
+      </div>
+    `, [
+      { text: '取消', class: 'btn-outline', onclick: closeModal },
+      { text: '确认开启', class: 'btn-primary', onclick: () => enable2FA(secret) }
+    ]);
+    setTimeout(() => document.getElementById('setup2faToken')?.focus(), 100);
+  } catch (err) {
+    showToast('获取 2FA 密钥失败: ' + err.message, 'error');
+  }
+}
+
+async function enable2FA(secret) {
+  const token = document.getElementById('setup2faToken')?.value.trim();
+  if (!token || token.length !== 6) { showToast('请输入 6 位验证码', 'warning'); return; }
+  try {
+    const data = await apiFetch(`${API_BASE}/api/manage/2fa?action=enable`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ secret, token })
+    });
+    if (data.success) {
+      const codes = data.backupCodes || [];
+      showModal('✅ 两步验证已开启', `
+        <div style="text-align:center;margin-bottom:0.5rem">
+          <div style="font-size:2rem">🎉</div>
+          <div style="font-weight:600;margin-top:0.3rem">绑定成功</div>
+        </div>
+        <div style="font-size:0.84rem;color:var(--ink-2);margin-bottom:0.5rem">请妥善保存以下 <b>备用恢复码</b>。当无法访问验证器时，可使用任一备用码完成登录。每个备用码只能使用一次。</div>
+        <div class="backup-codes-box">
+          <div class="backup-codes-grid">
+            ${codes.length ? codes.map(c => `<code>${escapeHtml(c)}</code>`).join('') : '<code style="grid-column:1/-1">无备用码</code>'}
+          </div>
+        </div>
+        <div style="font-size:0.76rem;color:var(--danger);text-align:center">⚠ 这些恢复码仅显示一次，请立即复制保存到安全位置！</div>
+      `, [
+        { text: '我已妥善保存', class: 'btn-primary', onclick: () => { closeModal(); loadSecuritySettings(); } }
+      ]);
+      showToast('两步验证已开启', 'success');
+    } else {
+      showToast(data.message || '开启失败', 'error');
+    }
+  } catch (err) {
+    showToast('开启失败: ' + err.message, 'error');
+  }
+}
+
+function disable2FA() {
+  showModal('🔒 关闭两步验证', `
+    <div style="text-align:center;margin-bottom:0.5rem">
+      <div style="font-size:2rem">⚠️</div>
+      <div style="font-weight:600;margin-top:0.3rem">关闭后将降低账号安全性</div>
+    </div>
+    <div class="twofa-tabs">
+      <button class="twofa-tab active" id="disableTabToken" onclick="switchDisable2FATab('token')">验证码</button>
+      <button class="twofa-tab" id="disableTabBackup" onclick="switchDisable2FATab('backup')">备用码</button>
+      <button class="twofa-tab" id="disableTabPwd" onclick="switchDisable2FATab('password')">密码</button>
+    </div>
+    <div class="modal-field" id="disableTokenField">
+      <label class="modal-label">动态验证码</label>
+      <input class="modal-input" id="disableTokenInput" inputmode="numeric" maxlength="6" placeholder="123456" style="text-align:center;letter-spacing:0.3em;font-size:1.1rem">
+    </div>
+    <div class="modal-field hidden" id="disableBackupField">
+      <label class="modal-label">备用恢复码</label>
+      <input class="modal-input" id="disableBackupInput" placeholder="输入备用码" style="font-family:'SF Mono',monospace">
+    </div>
+    <div class="modal-field hidden" id="disablePwdField">
+      <label class="modal-label">账号密码</label>
+      <input class="modal-input" id="disablePwdInput" type="password" placeholder="输入账号密码">
+    </div>
+  `, [
+    { text: '取消', class: 'btn-outline', onclick: closeModal },
+    { text: '确认关闭', class: 'btn-danger', onclick: doDisable2FA }
+  ]);
+}
+
+function switchDisable2FATab(tab) {
+  ['Token','Backup','Pwd'].forEach(t => {
+    document.getElementById('disableTab' + t).classList.toggle('active', tab === t.toLowerCase());
+  });
+  document.getElementById('disableTokenField').classList.toggle('hidden', tab !== 'token');
+  document.getElementById('disableBackupField').classList.toggle('hidden', tab !== 'backup');
+  document.getElementById('disablePwdField').classList.toggle('hidden', tab !== 'password');
+}
+
+async function doDisable2FA() {
+  const useToken = !document.getElementById('disableTokenField').classList.contains('hidden');
+  const useBackup = !document.getElementById('disableBackupField').classList.contains('hidden');
+  let body = {};
+  if (useToken) {
+    const token = document.getElementById('disableTokenInput').value.trim();
+    if (!token || token.length !== 6) { showToast('请输入 6 位验证码', 'warning'); return; }
+    body = { token };
+  } else if (useBackup) {
+    const backupCode = document.getElementById('disableBackupInput').value.trim();
+    if (!backupCode) { showToast('请输入备用码', 'warning'); return; }
+    body = { backupCode };
+  } else {
+    const password = document.getElementById('disablePwdInput').value;
+    if (!password) { showToast('请输入密码', 'warning'); return; }
+    body = { password };
+  }
+  try {
+    const data = await apiFetch(`${API_BASE}/api/manage/2fa?action=disable`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(body)
+    });
+    if (data.success) {
+      showToast('两步验证已关闭', 'success');
+      closeModal();
+      loadSecuritySettings();
+    } else {
+      showToast(data.message || '关闭失败', 'error');
+    }
+  } catch (err) {
+    showToast('关闭失败: ' + err.message, 'error');
+  }
+}
+
+// ============================
+// 端到端加密（E2EE）基础框架 - Web Crypto API
+// ============================
+async function deriveKey(password, salt) {
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: enc.encode(salt), iterations: 150000, hash: 'SHA-256' },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptFile(file, key) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = file instanceof ArrayBuffer ? file : await file.arrayBuffer();
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    data
+  );
+  // 拼接 iv + 密文，便于解密时拆分
+  const merged = new Uint8Array(iv.length + ciphertext.byteLength);
+  merged.set(iv, 0);
+  merged.set(new Uint8Array(ciphertext), iv.length);
+  return merged.buffer;
+}
+
+async function decryptFile(encryptedData, key) {
+  const buf = encryptedData instanceof ArrayBuffer ? new Uint8Array(encryptedData) : new Uint8Array(encryptedData);
+  const iv = buf.slice(0, 12);
+  const ciphertext = buf.slice(12);
+  const plaintext = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    ciphertext
+  );
+  return plaintext;
+}
+
+async function toggleE2EE(enabled) {
+  if (enabled) {
+    // 开启：要求用户设置加密密码并派生密钥
+    const password = prompt('请设置端到端加密密码：\n（此密码用于加密/解密文件，服务器不会存储，请务必牢记，丢失后已加密文件无法恢复）');
+    if (!password) {
+      document.getElementById('e2eeToggle').checked = false;
+      return;
+    }
+    if (password.length < 6) {
+      showToast('加密密码至少 6 位', 'warning');
+      document.getElementById('e2eeToggle').checked = false;
+      return;
+    }
+    try {
+      const salt = (currentUserInfo?.username || 'admin') + '_imgbed_e2ee';
+      E2EE_KEY = await deriveKey(password, salt);
+      E2EE_ENABLED = true;
+      showToast('端到端加密已开启', 'success');
+    } catch (err) {
+      document.getElementById('e2eeToggle').checked = false;
+      E2EE_ENABLED = false;
+      E2EE_KEY = null;
+      showToast('开启加密失败: ' + err.message, 'error');
+    }
+  } else {
+    E2EE_ENABLED = false;
+    E2EE_KEY = null;
+    showToast('端到端加密已关闭', 'info');
+  }
+  loadSecuritySettings();
+}
+
+// ============================
+// 在线设备管理
+// ============================
+function deviceIcon(deviceInfo) {
+  const type = (deviceInfo && deviceInfo.type) || 'desktop';
+  return { desktop: '🖥️', mobile: '📱', tablet: '📋', bot: '🤖' }[type] || '🖥️';
+}
+
+async function loadDevices() {
+  const container = document.getElementById('devicesContainer');
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">加载中...</div>';
+  let data;
+  try {
+    data = await apiFetch(`${API_BASE}/api/manage/sessions`, { headers: getAuthHeaders() });
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>加载失败: ${escapeHtml(err.message)}</div></div>`;
+    return;
+  }
+  const sessions = data.sessions || [];
+  if (!sessions.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📱</div><div>暂无在线设备</div></div>';
+    return;
+  }
+  let html = `<div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.75rem">共 ${sessions.length} 个在线会话</div>`;
+  sessions.forEach(s => {
+    const di = s.deviceInfo || {};
+    const isCurrent = !!s.isCurrent;
+    const isRemote = !!s.isRemote;
+    const browser = di.browser || '未知浏览器';
+    const os = di.os || '未知系统';
+    const title = `${escapeHtml(browser)} · ${escapeHtml(os)}`;
+    const authLabel = s.authType === 'sub' ? `子账号 @${escapeHtml(s.username || '')}` : (s.username ? escapeHtml(s.username) : '管理员');
+    html += `<div class="device-card ${isCurrent ? 'current' : ''}">
+      <div class="device-icon">${deviceIcon(di)}</div>
+      <div class="device-info">
+        <div class="device-title">
+          ${title}
+          ${isCurrent ? '<span class="device-badge current">本设备</span>' : ''}
+          ${isRemote ? '<span class="device-badge remote">异地</span>' : ''}
+        </div>
+        <div class="device-meta">
+          <span>👤 ${authLabel}</span>
+          <span>🔑 ${escapeHtml(s.tokenPrefix || '****')}</span>
+          ${s.ip ? `<span>🌐 ${escapeHtml(s.ip)}</span>` : ''}
+          <span>🕒 登录 ${escapeHtml(formatDate(s.createdAt) || '未知')}</span>
+          <span>⚡ 最近 ${escapeHtml(formatDate(s.lastAccessedAt) || '未知')}</span>
+        </div>
+      </div>
+      <div class="device-actions">
+        ${isCurrent
+          ? '<span style="font-size:0.76rem;color:var(--muted)">当前会话</span>'
+          : `<button class="btn btn-danger btn-sm" onclick="destroySession('${escapeHtml(s.tokenPrefix)}')">强制下线</button>`}
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+async function destroySession(tokenPrefix) {
+  if (!tokenPrefix || !confirm('确定强制下线该设备？该会话将立即失效。')) return;
+  try {
+    await apiFetch(`${API_BASE}/api/manage/sessions/${encodeURIComponent(tokenPrefix)}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    showToast('已下线该设备', 'success');
+    loadDevices();
+  } catch (err) {
+    showToast('下线失败: ' + err.message, 'error');
+  }
+}
+
+async function destroyAllOtherSessions() {
+  if (!confirm('确定一键下线所有其他设备？其他所有登录会话将立即失效。')) return;
+  try {
+    const data = await apiFetch(`${API_BASE}/api/manage/sessions?action=destroyAll`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    showToast(`已下线 ${data.destroyed || 0} 个其他设备`, 'success');
+    loadDevices();
+  } catch (err) {
+    showToast('操作失败: ' + err.message, 'error');
+  }
+}
 
 // ============================
 // 标签颜色映射
@@ -3439,6 +4257,7 @@ function showManageTab(tab) {
   if (tab === 'overview') loadManageOverview();
   else if (tab === 'users') loadManageUsers();
   else if (tab === 'logs') loadManageLogs();
+  else if (tab === 'security') loadSecuritySettings();
 }
 
 async function loadManageOverview() {
@@ -3517,7 +4336,7 @@ async function loadManageUsers() {
 function showCreateUserModal() {
   showModal('新建子账号', `
     <div class="modal-field"><label class="modal-label">用户名 *</label><input class="modal-input" id="newUsername" placeholder="小写字母、数字"></div>
-    <div class="modal-field"><label class="modal-label">密码 *</label><input class="modal-input" id="newPassword" type="password" placeholder="至少6位"></div>
+    <div class="modal-field"><label class="modal-label">密码 *</label><input class="modal-input" id="newPassword" type="password" placeholder="至少8位，建议包含字母、数字、符号" oninput="updatePasswordStrength('newPassword')"><div id="passwordStrengthIndicator"></div></div>
     <div class="modal-field"><label class="modal-label">显示名称</label><input class="modal-input" id="newDisplayName" placeholder="可选"></div>
     <div class="modal-field"><label class="modal-label">存储配额 (MB, 0=无限)</label><input class="modal-input" id="newQuota" type="number" value="0"></div>
     <div class="modal-field">
@@ -3547,7 +4366,11 @@ async function doCreateUser() {
   const dirsRaw = document.getElementById('newDirs').value.trim();
   const allowedDirs = dirsRaw ? dirsRaw.split('\n').map(d => d.trim()).filter(Boolean) : [];
   if (!username || !password) { showToast('用户名和密码必填', 'warning'); return; }
-  if (password.length < 6) { showToast('密码至少6位', 'warning'); return; }
+  const strength = checkPasswordStrength(password);
+  if (!strength.valid) {
+    showToast(`密码强度不足：${strength.suggestions[0] || '请使用更复杂的密码'}`, 'warning');
+    return;
+  }
   try {
     await apiFetch(`${API_BASE}/api/manage/users`, {
       method: 'POST',
@@ -3566,7 +4389,7 @@ function showEditUserModal(username) {
       showModal('编辑子账号', `
         <div class="modal-field"><label class="modal-label">用户名</label><input class="modal-input" value="${escapeHtml(user.username)}" disabled style="opacity:0.6"></div>
         <div class="modal-field"><label class="modal-label">显示名称</label><input class="modal-input" id="editDisplayName" value="${escapeHtml(user.displayName || '')}"></div>
-        <div class="modal-field"><label class="modal-label">新密码 (留空不修改)</label><input class="modal-input" id="editPassword" type="password" placeholder="留空不修改"></div>
+        <div class="modal-field"><label class="modal-label">新密码 (留空不修改)</label><input class="modal-input" id="editPassword" type="password" placeholder="留空不修改" oninput="updatePasswordStrength('editPassword')"><div id="passwordStrengthIndicator"></div></div>
         <div class="modal-field"><label class="modal-label">存储配额 (MB, 0=无限)</label><input class="modal-input" id="editQuota" type="number" value="${user.quota || 0}"></div>
         <div class="modal-field">
           <label class="modal-label">权限</label>
@@ -3596,7 +4419,14 @@ async function doEditUser(username) {
   const dirsRaw = document.getElementById('editDirs').value.trim();
   const allowedDirs = dirsRaw ? dirsRaw.split('\n').map(d => d.trim()).filter(Boolean) : [];
   const body = { displayName, quota, permissions, allowedDirs };
-  if (password) body.password = password;
+  if (password) {
+    const strength = checkPasswordStrength(password);
+    if (!strength.valid) {
+      showToast(`密码强度不足：${strength.suggestions[0] || '请使用更复杂的密码'}`, 'warning');
+      return;
+    }
+    body.password = password;
+  }
   try {
     await apiFetch(`${API_BASE}/api/manage/users/${encodeURIComponent(username)}`, {
       method: 'PUT',
