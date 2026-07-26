@@ -1611,6 +1611,7 @@ button, .btn, .btn-icon, .nav-item, .crumb, .file-card, .context-menu-item, .dir
 const API_BASE = '';
 const CHUNK_SIZE = 16 * 1024 * 1024; // 16MB
 let currentDir = '';
+let virtualRoot = ''; // 子账号的虚拟根目录（授权目录），admin 为空字符串。子账号无法返回到此目录之上
 let currentView = 'files';
 let viewMode = 'grid'; // grid | list
 let shareContext = null; // 用于分享弹窗的上下文
@@ -1709,6 +1710,8 @@ async function checkSession() {
         if (userResp && userResp.user) {
           currentUserInfo = userResp.user;
           applyUserPermissions();
+          // 子账号：设置虚拟根目录，刷新页面后也能正确限制
+          setupVirtualRoot();
         }
       } catch {}
       return true;
@@ -1760,6 +1763,32 @@ function applyUserPermissions() {
     const userNameEl = document.querySelector('.sidebar-user-name');
     if (userNameEl) userNameEl.textContent = currentUserInfo.displayName || currentUserInfo.username || '子账号';
   }
+}
+
+// 设置子账号的虚拟根目录（授权目录作为根目录，无法返回上级）
+function setupVirtualRoot() {
+  virtualRoot = '';
+  if (!currentUserInfo || currentUserInfo.role !== 'user') return;
+  const allowedDirs = currentUserInfo.allowedDirs || [];
+  const hasFullAccess = allowedDirs.length === 0 || allowedDirs.includes('/');
+  if (!hasFullAccess && allowedDirs.length > 0) {
+    let firstDir = allowedDirs[0].replace(/^\/+|\/+$/g, '');
+    if (firstDir) {
+      virtualRoot = firstDir + '/';
+      // 确保 currentDir 在虚拟根目录内
+      if (!currentDir || !currentDir.startsWith(virtualRoot)) {
+        currentDir = virtualRoot;
+      }
+    }
+  }
+}
+
+// 获取根目录显示名称
+function getRootLabel() {
+  if (virtualRoot) {
+    return virtualRoot.replace(/\/+$/g, '').split('/').pop() || '全部文件';
+  }
+  return '全部文件';
 }
 
 // 登录 Tab 切换
@@ -1832,6 +1861,8 @@ async function onLoggedIn(resp, welcomeMsg) {
     if (userResp && userResp.user) {
       currentUserInfo = userResp.user;
       applyUserPermissions();
+      // 子账号：设置虚拟根目录并自动跳转
+      setupVirtualRoot();
     }
   } catch {}
   loadFiles();
@@ -1892,6 +1923,8 @@ async function doLogout() {
   localStorage.removeItem('imgbed_token');
   isLoggedIn = false;
   currentUserInfo = null;
+  virtualRoot = '';
+  currentDir = '';
   pending2FA = null;
   E2EE_ENABLED = false;
   E2EE_KEY = null;
@@ -1919,6 +1952,10 @@ document.querySelectorAll('.nav-item').forEach(item => {
       currentTag = tagName;
       showView('tag');
     } else {
+      // 点击「全部文件」导航时回到根目录（子账号为虚拟根目录）
+      if (view === 'files') {
+        currentDir = virtualRoot || '';
+      }
       showView(view);
     }
   });
@@ -1959,27 +1996,43 @@ function showUploadView() {
 function updateUploadTargetDisplay() {
   const el = document.getElementById('uploadTargetPath');
   if (!el) return;
-  const text = uploadTargetDir === '' ? '全部文件' : escapeHtml(uploadTargetDir);
+  const rootLabel = getRootLabel();
+  const text = (uploadTargetDir === '' || uploadTargetDir === virtualRoot) ? rootLabel : escapeHtml(uploadTargetDir);
   el.textContent = text;
 }
 
 function showUploadTargetSelector() {
-  const currentTarget = uploadTargetDir === '' ? '全部文件' : uploadTargetDir;
+  const rootLabel = getRootLabel();
+  const currentTarget = (uploadTargetDir === '' || uploadTargetDir === virtualRoot) ? rootLabel : uploadTargetDir;
+  const placeholderText = virtualRoot ? `例如: ${virtualRoot}子目录` : '例如: docs/2024';
+  const hint = virtualRoot 
+    ? `提示: 路径须在「${rootLabel}」目录内，留空则上传到当前根目录`
+    : '提示: 可以直接输入路径，系统会自动创建不存在的文件夹';
   showModal('选择目标文件夹', `
     <div class="modal-field">
       <label class="modal-label">当前目标</label>
       <div style="padding:0.6rem 0.8rem;background:var(--accent-light);border-radius:var(--radius);font-size:0.85rem;color:var(--accent);font-weight:500;">${escapeHtml(currentTarget)}</div>
     </div>
     <div class="modal-field">
-      <label class="modal-label">路径 (留空为根目录)</label>
-      <input class="modal-input" id="uploadTargetInput" value="${escapeHtml(uploadTargetDir)}" placeholder="例如: docs/2024">
+      <label class="modal-label">路径 (留空为${escapeHtml(rootLabel)})</label>
+      <input class="modal-input" id="uploadTargetInput" value="${escapeHtml(uploadTargetDir)}" placeholder="${escapeHtml(placeholderText)}">
     </div>
-    <div style="font-size:0.78rem;color:var(--muted);margin-top:0.25rem;">提示: 可以直接输入路径，系统会自动创建不存在的文件夹</div>
+    <div style="font-size:0.78rem;color:var(--muted);margin-top:0.25rem;">${hint}</div>
   `, [
     { text: '取消', class: 'btn-outline', onClick: closeModal },
     { text: '确定', class: 'btn-primary', onClick: () => {
-      const val = document.getElementById('uploadTargetInput').value.trim();
-      uploadTargetDir = val.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/');
+      let val = document.getElementById('uploadTargetInput').value.trim();
+      val = val.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/');
+      // 子账号：确保上传路径在虚拟根目录内
+      if (virtualRoot) {
+        if (!val) {
+          val = virtualRoot;
+        } else if (!val.startsWith(virtualRoot)) {
+          // 如果用户输入的是相对路径，拼接虚拟根目录
+          val = virtualRoot + val;
+        }
+      }
+      uploadTargetDir = val;
       updateUploadTargetDisplay();
       closeModal();
     }}
@@ -1993,17 +2046,25 @@ function renderBreadcrumb() {
   const container = document.getElementById('breadcrumb');
   container.innerHTML = '';
   
+  const rootDir = virtualRoot || '';
+  const rootLabel = getRootLabel();
+  
   const rootCrumb = document.createElement('span');
-  rootCrumb.className = 'crumb' + (currentDir === '' ? ' current' : '');
-  rootCrumb.textContent = '全部文件';
-  rootCrumb.onclick = () => { currentDir = ''; loadFiles(); };
+  rootCrumb.className = 'crumb' + (currentDir === rootDir ? ' current' : '');
+  rootCrumb.textContent = rootLabel;
+  rootCrumb.onclick = () => { currentDir = rootDir; loadFiles(); };
   container.appendChild(rootCrumb);
   
-  if (currentDir) {
-    const parts = currentDir.split('/').filter(p => p);
-    let path = '';
+  if (currentDir && currentDir !== rootDir) {
+    // 计算相对虚拟根目录的路径部分，只显示 virtualRoot 之后的层级
+    let relativePath = currentDir;
+    if (virtualRoot && currentDir.startsWith(virtualRoot)) {
+      relativePath = currentDir.substring(virtualRoot.length);
+    }
+    const parts = relativePath.split('/').filter(p => p);
+    let path = virtualRoot || '';
     parts.forEach((part, i) => {
-      path += (i > 0 ? '/' : '') + part;
+      path += (path && !path.endsWith('/') ? '/' : '') + part;
       const sep = document.createElement('span');
       sep.className = 'crumb-sep';
       sep.textContent = '/';
@@ -2017,13 +2078,28 @@ function renderBreadcrumb() {
       container.appendChild(crumb);
     });
   }
+  
+  // 控制返回按钮：在虚拟根目录时隐藏
+  const backBtn = document.getElementById('backBtn');
+  if (backBtn) {
+    backBtn.style.display = (!currentDir || currentDir === rootDir) ? 'none' : '';
+  }
 }
 
 function goBack() {
-  if (!currentDir) return;
+  const rootDir = virtualRoot || '';
+  // 已在虚拟根目录，不能继续返回
+  if (!currentDir || currentDir === rootDir) return;
   const parts = currentDir.split('/').filter(p => p);
   parts.pop();
-  currentDir = parts.join('/') + (parts.length > 0 ? '/' : '');
+  let newDir = parts.join('/') + (parts.length > 0 ? '/' : '');
+  // 确保不能返回到虚拟根目录之上
+  if (virtualRoot) {
+    if (!newDir || !newDir.startsWith(virtualRoot)) {
+      newDir = virtualRoot;
+    }
+  }
+  currentDir = newDir;
   loadFiles();
 }
 
@@ -2161,8 +2237,14 @@ function renderFiles(data) {
 }
 
 function enterDir(dirEncoded) {
-  currentDir = decodeURIComponent(dirEncoded);
-  if (!currentDir.endsWith('/')) currentDir += '/';
+  let dir = decodeURIComponent(dirEncoded);
+  if (!dir.endsWith('/')) dir += '/';
+  // 子账号：禁止进入虚拟根目录之外的目录
+  if (virtualRoot && !dir.startsWith(virtualRoot)) {
+    showToast('无权访问该目录', 'warning');
+    return;
+  }
+  currentDir = dir;
   loadFiles();
 }
 
@@ -2413,9 +2495,10 @@ async function doRename(fileId, dirPath) {
 function showMoveModal(fileIds, mode) {
   moveContext = { fileIds, mode };
   const title = mode === 'copy' ? '复制到文件夹' : '移动到文件夹';
+  const rootLabel = getRootLabel();
   
   showModal(title, `
-    <div class="dir-tree-current" id="moveCurrentDir">当前目录: <span id="moveSelectedDir">/ (根目录)</span></div>
+    <div class="dir-tree-current" id="moveCurrentDir">当前目录: <span id="moveSelectedDir">${escapeHtml(rootLabel)}</span></div>
     <div class="dir-tree-container" id="dirTreeContainer">
       <div style="text-align:center;padding:1rem;color:var(--muted)">加载目录树...</div>
     </div>
@@ -2424,7 +2507,7 @@ function showMoveModal(fileIds, mode) {
     { text: mode === 'copy' ? '📋 复制' : '📂 移动', class: 'btn-primary', onclick: doMoveOrCopy }
   ]);
   
-  loadDirTree('');
+  loadDirTree(virtualRoot || '');
 }
 
 function showMoveDirModal(dirEncoded, dirName) {
@@ -2438,17 +2521,22 @@ async function loadDirTree(selectedPath) {
     const container = document.getElementById('dirTreeContainer');
     if (!container) return;
     
-    let html = `<div class="dir-tree-node" onclick="selectMoveDir('')" data-path="">
-      <span>📁</span><span>根目录</span>
+    const rootLabel = getRootLabel();
+    const rootPath = virtualRoot || '';
+    
+    let html = `<div class="dir-tree-node" onclick="selectMoveDir('${encodeURIComponent(rootPath)}')" data-path="${escapeHtml(rootPath)}">
+      <span>📁</span><span>${escapeHtml(rootLabel)}</span>
     </div>`;
     
     function renderTree(node, depth) {
       if (!node || !node.children) return '';
       let result = '';
       for (const child of node.children) {
-        const padding = 'margin-left:' + (depth * 20) + 'px';
         const name = child.name || child.path?.split('/').pop();
         const path = child.path || '';
+        // 子账号：过滤掉虚拟根目录之外的目录
+        if (virtualRoot && path && !path.startsWith(virtualRoot)) continue;
+        const padding = 'margin-left:' + (depth * 20) + 'px';
         result += `<div class="dir-tree-node" style="${padding}" onclick="selectMoveDir('${encodeURIComponent(path)}')" data-path="${escapeHtml(path)}">
           <span>📁</span><span>${escapeHtml(name)}</span>
         </div>`;
@@ -2460,7 +2548,27 @@ async function loadDirTree(selectedPath) {
     }
     
     if (data.tree) {
-      html += renderTree(data.tree, 0);
+      // 子账号：从虚拟根目录节点开始渲染子目录
+      if (virtualRoot) {
+        function findNode(node, targetPath) {
+          if (!node) return null;
+          const normTarget = targetPath.replace(/\/+$/g, '');
+          if (node.path === targetPath || node.path === normTarget) return node;
+          if (node.children) {
+            for (const child of node.children) {
+              const found = findNode(child, targetPath);
+              if (found) return found;
+            }
+          }
+          return null;
+        }
+        const rootNode = findNode(data.tree, virtualRoot);
+        if (rootNode && rootNode.children) {
+          html += renderTree(rootNode, 0);
+        }
+      } else {
+        html += renderTree(data.tree, 0);
+      }
     }
     
     container.innerHTML = html;
@@ -2472,8 +2580,14 @@ async function loadDirTree(selectedPath) {
 
 function selectMoveDir(pathEncoded) {
   const path = decodeURIComponent(pathEncoded);
+  // 子账号：禁止选择虚拟根目录之外的目标
+  if (virtualRoot && path && !path.startsWith(virtualRoot)) {
+    showToast('无权选择该目录', 'warning');
+    return;
+  }
   moveContext.targetDir = path;
-  document.getElementById('moveSelectedDir').textContent = path || '/ (根目录)';
+  const rootLabel = getRootLabel();
+  document.getElementById('moveSelectedDir').textContent = (path === '' || path === virtualRoot) ? rootLabel : path;
   
   // 高亮选中
   document.querySelectorAll('.dir-tree-node').forEach(n => n.classList.remove('selected'));
@@ -2482,9 +2596,16 @@ function selectMoveDir(pathEncoded) {
 
 async function doMoveOrCopy() {
   if (!moveContext || !moveContext.fileIds) return;
-  const targetDir = moveContext.targetDir || '';
+  let targetDir = moveContext.targetDir || '';
   const mode = moveContext.mode;
   const fileIds = moveContext.fileIds;
+  
+  // 子账号：确保目标目录在虚拟根目录内
+  if (virtualRoot) {
+    if (!targetDir || !targetDir.startsWith(virtualRoot)) {
+      targetDir = virtualRoot;
+    }
+  }
   
   closeModal();
   
