@@ -207,6 +207,72 @@ body {
 }
 .file-card:hover .file-actions { display: flex; }
 
+/* ===== Thumbnail ===== */
+.file-thumb {
+  width: 100%;
+  height: 120px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg);
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--rule);
+  cursor: pointer;
+}
+.file-card:hover .file-thumb { border-color: var(--accent); }
+
+/* ===== Image Preview Overlay ===== */
+.preview-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+.preview-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+.preview-img {
+  max-width: 90vw;
+  max-height: 75vh;
+  object-fit: contain;
+  border-radius: 8px;
+  display: none;
+}
+.preview-content.loaded .preview-img { display: block; }
+.preview-content.loaded .preview-loading { display: none; }
+.preview-loading {
+  color: #fff;
+  font-size: 1rem;
+  padding: 2rem;
+}
+.preview-error {
+  color: var(--danger);
+  font-size: 1rem;
+  padding: 2rem;
+}
+.preview-info {
+  color: #fff;
+  font-size: 0.85rem;
+  text-align: center;
+  word-break: break-all;
+  max-width: 80vw;
+}
+.preview-toolbar {
+  display: flex;
+  gap: 0.5rem;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
 /* ===== File List (table) ===== */
 .file-table { width: 100%; border-collapse: collapse; }
 .file-table th {
@@ -767,17 +833,25 @@ function renderFiles(data) {
       </div>`;
     });
     files.forEach(file => {
-      const name = file.FileName || file.name?.split('/').pop() || '未知';
-      const size = file.FileSizeBytes ? formatSize(parseInt(file.FileSizeBytes)) : (file.FileSize ? file.FileSize + ' MB' : '');
-      const time = formatDate(file.TimeStamp);
+      const meta = file.metadata || file;
+      const name = meta.FileName || file.name?.split('/').pop() || '未知';
+      const size = meta.FileSizeBytes ? formatSize(parseInt(meta.FileSizeBytes)) : (meta.FileSize ? meta.FileSize + ' MB' : '');
+      const time = formatDate(meta.TimeStamp);
       const fileId = encodeURIComponent(file.name || file.id);
-      html += `<div class="file-card" onclick="showFileMenu('${fileId}', '${escapeHtml(name)}')">
+      const fileType = meta.FileType || '';
+      const isImage = fileType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name);
+      const thumbUrl = isImage ? `${API_BASE}/file/${fileId}?from=admin` : '';
+      const iconHtml = isImage
+        ? `<div class="file-thumb" style="background-image:url('${thumbUrl}')"></div>`
+        : `<div class="file-icon">${getFileIcon(name, fileType)}</div>`;
+      const clickAction = isImage ? `previewFile('${fileId}', '${escapeHtml(name)}')` : `showFileMenu('${fileId}', '${escapeHtml(name)}')`;
+      html += `<div class="file-card" onclick="${clickAction}">
         <div class="file-actions">
           <button class="btn-icon" onclick="event.stopPropagation();downloadFile('${fileId}')" title="下载">⬇️</button>
           <button class="btn-icon" onclick="event.stopPropagation();showShareModal('${fileId}', '${escapeHtml(name)}')" title="分享">🔗</button>
           <button class="btn-icon" onclick="event.stopPropagation();deleteFile('${fileId}', '${escapeHtml(name)}')" title="删除">🗑️</button>
         </div>
-        <div class="file-icon">${getFileIcon(name, file.FileType)}</div>
+        ${iconHtml}
         <div class="file-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
         <div class="file-meta">${size}</div>
       </div>`;
@@ -795,12 +869,16 @@ function renderFiles(data) {
       </tr>`;
     });
     files.forEach(file => {
-      const name = file.FileName || file.name?.split('/').pop() || '未知';
-      const size = file.FileSizeBytes ? formatSize(parseInt(file.FileSizeBytes)) : (file.FileSize ? file.FileSize + ' MB' : '');
-      const time = formatDate(file.TimeStamp);
+      const meta = file.metadata || file;
+      const name = meta.FileName || file.name?.split('/').pop() || '未知';
+      const size = meta.FileSizeBytes ? formatSize(parseInt(meta.FileSizeBytes)) : (meta.FileSize ? meta.FileSize + ' MB' : '');
+      const time = formatDate(meta.TimeStamp);
       const fileId = encodeURIComponent(file.name || file.id);
+      const fileType = meta.FileType || '';
+      const isImage = fileType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name);
+      const nameClickAction = isImage ? `previewFile('${fileId}', '${escapeHtml(name)}')` : `downloadFile('${fileId}')`;
       html += `<tr>
-        <td class="col-name"><span class="col-icon">${getFileIcon(name, file.FileType)}</span><span onclick="downloadFile('${fileId}')" style="cursor:pointer">${escapeHtml(name)}</span></td>
+        <td class="col-name"><span class="col-icon">${getFileIcon(name, fileType)}</span><span onclick="${nameClickAction}" style="cursor:pointer">${escapeHtml(name)}</span></td>
         <td>${size}</td><td>${time}</td>
         <td class="col-actions">
           <button class="btn-icon" onclick="downloadFile('${fileId}')" title="下载">⬇️</button>
@@ -839,6 +917,63 @@ async function downloadFile(fileIdEncoded) {
   window.open(`${API_BASE}/file/${encodeURIComponent(fileId)}?from=admin`, '_blank');
 }
 
+// 图片预览 - 全屏查看
+function previewFile(fileIdEncoded, fileName) {
+  const fileId = decodeURIComponent(fileIdEncoded);
+  const imgUrl = `${API_BASE}/file/${encodeURIComponent(fileId)}?from=admin`;
+  const overlay = document.createElement('div');
+  overlay.className = 'preview-overlay';
+  overlay.onclick = () => overlay.remove();
+  
+  const content = document.createElement('div');
+  content.className = 'preview-content';
+  content.onclick = (e) => e.stopPropagation();
+  
+  const img = document.createElement('img');
+  img.className = 'preview-img';
+  img.alt = fileName || '';
+  img.onload = () => content.classList.add('loaded');
+  img.onerror = () => {
+    content.classList.remove('loaded');
+    const errDiv = document.createElement('div');
+    errDiv.className = 'preview-error';
+    errDiv.textContent = '图片加载失败';
+    content.innerHTML = '';
+    content.appendChild(errDiv);
+  };
+  img.src = imgUrl;
+  
+  const loading = document.createElement('div');
+  loading.className = 'preview-loading';
+  loading.textContent = '加载中...';
+  
+  const info = document.createElement('div');
+  info.className = 'preview-info';
+  info.textContent = fileName || '';
+  
+  const toolbar = document.createElement('div');
+  toolbar.className = 'preview-toolbar';
+  
+  const dlBtn = document.createElement('button');
+  dlBtn.className = 'btn btn-outline';
+  dlBtn.textContent = '⬇️ 下载';
+  dlBtn.onclick = () => window.open(imgUrl, '_blank');
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'btn btn-outline';
+  closeBtn.textContent = '✕ 关闭';
+  closeBtn.onclick = () => overlay.remove();
+  
+  toolbar.appendChild(dlBtn);
+  toolbar.appendChild(closeBtn);
+  content.appendChild(img);
+  content.appendChild(loading);
+  content.appendChild(info);
+  content.appendChild(toolbar);
+  overlay.appendChild(content);
+  document.body.appendChild(overlay);
+}
+
 async function deleteFile(fileIdEncoded, fileName) {
   if (!confirm(`确定删除 "${fileName}" 吗?`)) return;
   try {
@@ -859,7 +994,7 @@ async function showFileMenu(fileIdEncoded, fileName) {
   showModal('文件操作', `
     <div style="text-align:center;margin-bottom:1rem">
       <div style="font-size:3rem">${getFileIcon(fileName)}</div>
-      <div style="font-weight:600;margin-top:0.5rem">${escapeHtml(fileName)}</div>
+      <div style="font-weight:600;margin-top:0.5rem;word-break:break-all">${escapeHtml(fileName)}</div>
     </div>
   `, [
     { text: '⬇️ 下载', onclick: () => { downloadFile(fileIdEncoded); closeModal(); } },
@@ -894,10 +1029,11 @@ async function createDirectory() {
   
   try {
     // 通过上传 .keep 占位文件创建目录
+    // Telegram 不接受空文件,所以写入一个占位字符
     const formData = new FormData();
-    formData.append('file', new Blob([''], { type: 'application/octet-stream' }), '.keep');
+    formData.append('file', new Blob(['.'], { type: 'application/octet-stream' }), '.keep');
     
-    let url = `${API_BASE}/upload?uploadNameType=origin&uploadFolder=${encodeURIComponent(fullPath)}`;
+    let url = `${API_BASE}/upload?uploadNameType=origin&uploadChannel=telegram&uploadFolder=${encodeURIComponent(fullPath)}`;
     await apiFetch(url, { method: 'POST', body: formData, headers: getAuthHeaders() });
     
     showToast('文件夹创建成功', 'success');
@@ -1056,11 +1192,12 @@ async function chunkedUpload(file, totalChunks, updateProgress) {
   mergeFormData.append('originalFileType', file.type || 'application/octet-stream');
   
   // 上传目录
+  let mergeUrl = `${API_BASE}/upload?chunked=true&merge=true&uploadChannel=telegram&uploadNameType=origin`;
   if (currentDir) {
     mergeFormData.append('uploadFolder', currentDir);
   }
   
-  await apiFetch(`${API_BASE}/upload?chunked=true&merge=true&uploadChannel=telegram`, {
+  await apiFetch(mergeUrl, {
     method: 'POST', body: mergeFormData, headers: getAuthHeaders()
   });
   
@@ -1072,7 +1209,7 @@ async function directUpload(file, updateProgress) {
   const formData = new FormData();
   formData.append('file', file);
   
-  let url = `${API_BASE}/upload?uploadNameType=origin`;
+  let url = `${API_BASE}/upload?uploadNameType=origin&uploadChannel=telegram`;
   if (currentDir) url += `&uploadFolder=${encodeURIComponent(currentDir)}`;
   
   // 使用 XMLHttpRequest 跟踪进度
