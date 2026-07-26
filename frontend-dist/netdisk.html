@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人网盘</title>
+<style>
+:root {
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --ink: #1a1a2e;
+  --muted: #6b7280;
+  --rule: #e5e7eb;
+  --accent: #4f46e5;
+  --accent-light: #eef2ff;
+  --accent2: #06b6d4;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ===== Layout ===== */
+.app { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 240px;
+  background: var(--surface);
+  border-right: 1px solid var(--rule);
+  padding: 1.5rem 1rem;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.content { flex: 1; padding: 1.5rem 2rem; overflow-y: auto; }
+
+/* ===== Sidebar ===== */
+.logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.logo-icon { font-size: 1.5rem; }
+.nav-section { margin-bottom: 1.5rem; }
+.nav-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+  padding-left: 0.75rem;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--ink);
+  transition: all 0.15s;
+  font-weight: 500;
+}
+.nav-item:hover { background: var(--accent-light); }
+.nav-item.active { background: var(--accent); color: white; }
+.nav-icon { font-size: 1.1rem; width: 20px; text-align: center; }
+.storage-info { margin-top: auto; padding: 1rem; background: var(--accent-light); border-radius: var(--radius); }
+.storage-bar { height: 6px; background: var(--rule); border-radius: 3px; margin: 0.5rem 0; overflow: hidden; }
+.storage-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s; }
+.storage-text { font-size: 0.75rem; color: var(--muted); }
+
+/* ===== Topbar ===== */
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+  padding: 0.75rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.breadcrumb { display: flex; align-items: center; gap: 0.4rem; flex: 1; min-width: 0; }
+.crumb {
+  cursor: pointer;
+  color: var(--muted);
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.crumb:hover { background: var(--accent-light); color: var(--accent); }
+.crumb.current { color: var(--ink); font-weight: 600; }
+.crumb-sep { color: var(--rule); }
+
+/* ===== Search ===== */
+.search-box {
+  position: relative;
+  width: 280px;
+}
+.search-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem 0.5rem 2.2rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-icon { position: absolute; left: 0.7rem; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 0.85rem; }
+
+/* ===== Buttons ===== */
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: #4338ca; }
+.btn-outline { background: transparent; border: 1px solid var(--rule); color: var(--ink); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { background: var(--danger); color: white; }
+.btn-danger:hover { opacity: 0.9; }
+.btn-sm { padding: 0.35rem 0.7rem; font-size: 0.8rem; }
+.btn-icon {
+  width: 32px; height: 32px; padding: 0;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.15s;
+}
+.btn-icon:hover { background: var(--accent-light); }
+
+/* ===== Toolbar ===== */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.toolbar-spacer { flex: 1; }
+.sort-select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: white;
+  cursor: pointer;
+}
+
+/* ===== File Grid ===== */
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+.file-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.file-card:hover { border-color: var(--accent); box-shadow: var(--shadow-lg); }
+.file-card.selected { border-color: var(--accent); background: var(--accent-light); }
+.file-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.file-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 0.25rem;
+}
+.file-meta { font-size: 0.7rem; color: var(--muted); }
+.file-actions {
+  position: absolute;
+  top: 4px; right: 4px;
+  display: none;
+  gap: 2px;
+}
+.file-card:hover .file-actions { display: flex; }
+
+/* ===== File List (table) ===== */
+.file-table { width: 100%; border-collapse: collapse; }
+.file-table th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--rule);
+  font-weight: 600;
+}
+.file-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.85rem;
+}
+.file-table tr { cursor: pointer; transition: background 0.1s; }
+.file-table tr:hover { background: var(--accent-light); }
+.file-table .col-name { display: flex; align-items: center; gap: 0.6rem; }
+.file-table .col-icon { font-size: 1.3rem; }
+.file-table .col-actions { text-align: right; white-space: nowrap; }
+
+/* ===== Upload Zone ===== */
+.upload-zone {
+  border: 2px dashed var(--rule);
+  border-radius: var(--radius);
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.2s;
+  margin-bottom: 1rem;
+}
+.upload-zone.dragover { border-color: var(--accent); background: var(--accent-light); }
+.upload-zone-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+.upload-zone-text { color: var(--muted); margin-bottom: 0.5rem; }
+
+/* ===== Upload Progress ===== */
+.upload-list { margin-top: 1rem; }
+.upload-item {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.upload-item-info { flex: 1; min-width: 0; }
+.upload-item-name { font-size: 0.85rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upload-item-status { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+.progress-bar { height: 4px; background: var(--rule); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+.progress-fill.success { background: var(--success); }
+.progress-fill.error { background: var(--danger); }
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: var(--shadow-lg);
+}
+.modal-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; }
+.modal-body { margin-bottom: 1.25rem; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 0.5rem; }
+.modal-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+}
+.modal-input:focus { border-color: var(--accent); }
+.modal-label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.4rem; color: var(--muted); }
+.modal-field { margin-bottom: 0.85rem; }
+
+/* ===== Share Link Display ===== */
+.share-link-box {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  background: var(--accent-light);
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+}
+.share-link-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 0.85rem;
+  color: var(--accent);
+  outline: none;
+  font-family: monospace;
+}
+
+/* ===== Toast ===== */
+.toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; }
+.toast {
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  box-shadow: var(--shadow-lg);
+  font-size: 0.85rem;
+  border-left: 3px solid var(--accent);
+  animation: slideIn 0.3s ease;
+  min-width: 200px;
+}
+.toast.success { border-left-color: var(--success); }
+.toast.error { border-left-color: var(--danger); }
+.toast.warning { border-left-color: var(--warning); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ===== Empty State ===== */
+.empty-state { text-align: center; padding: 3rem; color: var(--muted); }
+.empty-state-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .content { padding: 1rem; }
+  .search-box { width: 150px; }
+  .file-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+}
+
+/* ===== Hidden ===== */
+.hidden { display: none !important; }
+
+/* ===== Login ===== */
+.login-overlay {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.login-card {
+  background: var(--surface); border-radius: 16px; padding: 2.5rem;
+  width: 360px; max-width: 90vw; box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+.login-logo { font-size: 3rem; margin-bottom: 0.5rem; }
+.login-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+.login-subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+.login-input {
+  width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--rule);
+  border-radius: 8px; font-size: 0.95rem; margin-bottom: 1rem;
+  transition: border-color 0.15s;
+}
+.login-input:focus { outline: none; border-color: var(--accent); }
+.login-btn {
+  width: 100%; padding: 0.75rem; background: var(--accent); color: white;
+  border: none; border-radius: 8px; font-size: 1rem; font-weight: 600;
+  cursor: pointer; transition: background 0.15s;
+}
+.login-btn:hover { background: #4338ca; }
+.login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.login-error { color: var(--danger); font-size: 0.85rem; margin-top: 0.75rem; min-height: 1.2em; }
+.user-badge {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.75rem;
+  background: var(--accent-light); border-radius: 8px; font-size: 0.8rem; cursor: pointer;
+}
+</style>
+</head>
+<body>
+<!-- Login Overlay -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo">📁</div>
+    <div class="login-title">我的网盘</div>
+    <div class="login-subtitle">请输入访问密码以继续</div>
+    <input type="password" class="login-input" id="loginAuthCode" placeholder="访问密码" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">登录</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="logo">
+      <span class="logo-icon">📁</span>
+      <span>我的网盘</span>
+    </div>
+    <div class="nav-section">
+      <div class="nav-title">文件</div>
+      <div class="nav-item active" data-view="files">
+        <span class="nav-icon">📂</span>全部文件
+      </div>
+      <div class="nav-item" data-view="shares">
+        <span class="nav-icon">🔗</span>分享管理
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-title">上传</div>
+      <div class="nav-item" data-view="upload">
+        <span class="nav-icon">⬆️</span>上传文件
+      </div>
+    </div>
+    <div class="storage-info">
+      <div style="font-size:0.8rem;font-weight:600;">存储空间</div>
+      <div class="storage-bar"><div class="storage-fill" id="storageFill" style="width:0%"></div></div>
+      <div class="storage-text" id="storageText">计算中...</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="breadcrumb" id="breadcrumb"></div>
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="searchInput" placeholder="搜索文件...">
+      </div>
+      <button class="btn btn-primary" onclick="showUploadView()">
+        <span>⬆️</span>上传
+      </button>
+      <button class="btn btn-outline" onclick="showCreateDirModal()">
+        <span>📁</span>新建文件夹
+      </button>
+      <div class="user-badge" onclick="doLogout()" title="点击退出登录">
+        <span>👤</span><span>退出</span>
+      </div>
+    </div>
+
+    <div class="content" id="content">
+      <!-- Files View -->
+      <div id="filesView">
+        <div class="toolbar">
+          <button class="btn btn-outline btn-sm" onclick="goBack()" id="backBtn">← 返回</button>
+          <div class="toolbar-spacer"></div>
+          <select class="sort-select" id="sortBy" onchange="loadFiles()">
+            <option value="">默认排序</option>
+            <option value="name">按名称</option>
+            <option value="size">按大小</option>
+            <option value="time">按时间</option>
+          </select>
+          <select class="sort-select" id="sortOrder" onchange="loadFiles()">
+            <option value="desc">降序</option>
+            <option value="asc">升序</option>
+          </select>
+          <button class="btn-icon" onclick="toggleView()" id="viewToggle" title="切换视图">⊞</button>
+        </div>
+        <div id="fileListContainer"></div>
+      </div>
+
+      <!-- Upload View -->
+      <div id="uploadView" class="hidden">
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-zone-icon">📤</div>
+          <div class="upload-zone-text">拖拽文件到此处,或</div>
+          <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">选择文件</button>
+          <input type="file" id="fileInput" multiple style="display:none" onchange="handleFileSelect(event)">
+          <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--muted)">
+            支持大文件分片上传(每片 16MB),1小时内传完即可
+          </div>
+        </div>
+        <div class="upload-list" id="uploadList"></div>
+      </div>
+
+      <!-- Shares View -->
+      <div id="sharesView" class="hidden">
+        <div class="toolbar">
+          <h3 style="font-weight:600;">分享管理</h3>
+          <div class="toolbar-spacer"></div>
+        </div>
+        <div id="sharesContainer"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ============================
+// 全局状态
+// ============================
+const API_BASE = '';
+const CHUNK_SIZE = 16 * 1024 * 1024; // 16MB
+let currentDir = '';
+let currentView = 'files';
+let viewMode = 'grid'; // grid | list
+let shareContext = null; // 用于分享弹窗的上下文
+let isLoggedIn = false; // 登录状态
+
+// ============================
+// 工具函数
+// ============================
+function showToast(msg, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+function formatSize(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function formatDate(timestamp) {
+  if (!timestamp) return '';
+  const d = new Date(parseInt(timestamp));
+  return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function getFileIcon(fileName, fileType, isDir) {
+  if (isDir) return '📁';
+  const ext = (fileName || '').split('.').pop().toLowerCase();
+  const typeMap = {
+    jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', webp: '🖼️', svg: '🖼️', bmp: '🖼️',
+    mp4: '🎬', avi: '🎬', mov: '🎬', mkv: '🎬', webm: '🎬',
+    mp3: '🎵', wav: '🎵', flac: '🎵', ogg: '🎵',
+    pdf: '📄', doc: '📄', docx: '📄', txt: '📄', md: '📄',
+    zip: '📦', rar: '📦', '7z': '📦', tar: '📦', gz: '📦',
+    xlsx: '📊', xls: '📊', csv: '📊', ppt: '📊', pptx: '📊',
+    js: '💻', ts: '💻', json: '💻', html: '💻', css: '💻', py: '💻',
+    default: '📄'
+  };
+  return typeMap[ext] || '📄';
+}
+
+async function apiFetch(url, options = {}) {
+  // 确保 Cookie 自动携带,用于会话认证
+  options.credentials = 'include';
+  const resp = await fetch(url, options);
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = text; }
+  if (!resp.ok) {
+    throw new Error(data?.error || data?.message || `HTTP ${resp.status}`);
+  }
+  return data;
+}
+
+// ============================
+// 认证 - 会话 Cookie 为主,API Token 为辅
+// ============================
+function getAuthHeaders() {
+  // 会话 Cookie 会自动携带,无需手动添加
+  // 仅当本地存有 API Token 时才使用 Bearer 认证
+  const token = localStorage.getItem('imgbed_token');
+  if (token) {
+    return { 'Authorization': `Bearer ${token}` };
+  }
+  return {};
+}
+
+// 检查登录会话
+async function checkSession() {
+  try {
+    const resp = await fetch(`${API_BASE}/api/auth/sessionCheck`);
+    const data = await resp.json();
+    if (data.valid) {
+      isLoggedIn = true;
+      return true;
+    }
+    // 未配置认证时直接放行
+    if (!data.adminRequired && !data.userRequired) {
+      isLoggedIn = true;
+      return true;
+    }
+    isLoggedIn = false;
+    return false;
+  } catch {
+    // 接口异常时假设未认证,显示登录
+    isLoggedIn = false;
+    return false;
+  }
+}
+
+// 登录
+async function doLogin() {
+  const authCode = document.getElementById('loginAuthCode').value.trim();
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  if (!authCode) { errEl.textContent = '请输入访问密码'; return; }
+  
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = '登录中...';
+  
+  try {
+    const resp = await fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ authCode }),
+      credentials: 'include',
+    });
+    if (resp.ok) {
+      isLoggedIn = true;
+      document.getElementById('loginOverlay').style.display = 'none';
+      loadFiles();
+      loadStorageStats();
+      showToast('登录成功', 'success');
+    } else if (resp.status === 401) {
+      errEl.textContent = '密码错误,请重试';
+    } else {
+      errEl.textContent = `登录失败 (HTTP ${resp.status})`;
+    }
+  } catch (err) {
+    errEl.textContent = '网络错误: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '登录';
+  }
+}
+
+// 登出
+async function doLogout() {
+  try {
+    await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+  } catch {}
+  localStorage.removeItem('imgbed_token');
+  isLoggedIn = false;
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('loginAuthCode').value = '';
+  document.getElementById('loginError').textContent = '';
+  showToast('已退出登录', 'info');
+}
+
+// ============================
+// 导航
+// ============================
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const view = item.dataset.view;
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    showView(view);
+  });
+});
+
+function showView(view) {
+  currentView = view;
+  document.getElementById('filesView').classList.add('hidden');
+  document.getElementById('uploadView').classList.add('hidden');
+  document.getElementById('sharesView').classList.add('hidden');
+  document.getElementById(view + 'View').classList.remove('hidden');
+  
+  if (view === 'files') loadFiles();
+  if (view === 'shares') loadShares();
+}
+
+function showUploadView() {
+  showView('upload');
+}
+
+// ============================
+// 面包屑导航
+// ============================
+function renderBreadcrumb() {
+  const container = document.getElementById('breadcrumb');
+  container.innerHTML = '';
+  
+  const rootCrumb = document.createElement('span');
+  rootCrumb.className = 'crumb' + (currentDir === '' ? ' current' : '');
+  rootCrumb.textContent = '全部文件';
+  rootCrumb.onclick = () => { currentDir = ''; loadFiles(); };
+  container.appendChild(rootCrumb);
+  
+  if (currentDir) {
+    const parts = currentDir.split('/').filter(p => p);
+    let path = '';
+    parts.forEach((part, i) => {
+      path += (i > 0 ? '/' : '') + part;
+      const sep = document.createElement('span');
+      sep.className = 'crumb-sep';
+      sep.textContent = '/';
+      container.appendChild(sep);
+      
+      const crumb = document.createElement('span');
+      crumb.className = 'crumb' + (i === parts.length - 1 ? ' current' : '');
+      crumb.textContent = part;
+      const capturedPath = path + (i < parts.length - 1 ? '/' : '');
+      crumb.onclick = () => { currentDir = capturedPath; loadFiles(); };
+      container.appendChild(crumb);
+    });
+  }
+}
+
+function goBack() {
+  if (!currentDir) return;
+  const parts = currentDir.split('/').filter(p => p);
+  parts.pop();
+  currentDir = parts.join('/') + (parts.length > 0 ? '/' : '');
+  loadFiles();
+}
+
+// ============================
+// 文件列表
+// ============================
+async function loadFiles() {
+  renderBreadcrumb();
+  const container = document.getElementById('fileListContainer');
+  container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">加载中...</div>';
+  
+  try {
+    const sortBy = document.getElementById('sortBy').value;
+    const sortOrder = document.getElementById('sortOrder').value;
+    const search = document.getElementById('searchInput').value.trim();
+    
+    let url = `${API_BASE}/api/manage/list?dir=${encodeURIComponent(currentDir)}&count=500`;
+    if (sortBy) url += `&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    
+    const data = await apiFetch(url, { headers: getAuthHeaders() });
+    renderFiles(data);
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>加载失败: ${err.message}</div><div style="margin-top:0.5rem;font-size:0.8rem">请确保已登录管理后台</div></div>`;
+  }
+}
+
+function renderFiles(data) {
+  const container = document.getElementById('fileListContainer');
+  const files = data.files || [];
+  const directories = data.directories || [];
+  
+  if (files.length === 0 && directories.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>此文件夹为空</div></div>';
+    return;
+  }
+  
+  if (viewMode === 'grid') {
+    let html = '<div class="file-grid">';
+    directories.forEach(dir => {
+      const dirName = dir.split('/').filter(p => p).pop();
+      html += `<div class="file-card" onclick="enterDir('${encodeURIComponent(dir)}')">
+        <div class="file-icon">📁</div>
+        <div class="file-name">${escapeHtml(dirName)}</div>
+        <div class="file-meta">文件夹</div>
+      </div>`;
+    });
+    files.forEach(file => {
+      const name = file.FileName || file.name?.split('/').pop() || '未知';
+      const size = file.FileSizeBytes ? formatSize(parseInt(file.FileSizeBytes)) : (file.FileSize ? file.FileSize + ' MB' : '');
+      const time = formatDate(file.TimeStamp);
+      const fileId = encodeURIComponent(file.name || file.id);
+      html += `<div class="file-card" onclick="showFileMenu('${fileId}', '${escapeHtml(name)}')">
+        <div class="file-actions">
+          <button class="btn-icon" onclick="event.stopPropagation();downloadFile('${fileId}')" title="下载">⬇️</button>
+          <button class="btn-icon" onclick="event.stopPropagation();showShareModal('${fileId}', '${escapeHtml(name)}')" title="分享">🔗</button>
+          <button class="btn-icon" onclick="event.stopPropagation();deleteFile('${fileId}', '${escapeHtml(name)}')" title="删除">🗑️</button>
+        </div>
+        <div class="file-icon">${getFileIcon(name, file.FileType)}</div>
+        <div class="file-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
+        <div class="file-meta">${size}</div>
+      </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  } else {
+    let html = '<table class="file-table"><thead><tr><th>名称</th><th>大小</th><th>修改时间</th><th>操作</th></tr></thead><tbody>';
+    directories.forEach(dir => {
+      const dirName = dir.split('/').filter(p => p).pop();
+      html += `<tr onclick="enterDir('${encodeURIComponent(dir)}')">
+        <td class="col-name"><span class="col-icon">📁</span>${escapeHtml(dirName)}</td>
+        <td>-</td><td>-</td>
+        <td class="col-actions"></td>
+      </tr>`;
+    });
+    files.forEach(file => {
+      const name = file.FileName || file.name?.split('/').pop() || '未知';
+      const size = file.FileSizeBytes ? formatSize(parseInt(file.FileSizeBytes)) : (file.FileSize ? file.FileSize + ' MB' : '');
+      const time = formatDate(file.TimeStamp);
+      const fileId = encodeURIComponent(file.name || file.id);
+      html += `<tr>
+        <td class="col-name"><span class="col-icon">${getFileIcon(name, file.FileType)}</span><span onclick="downloadFile('${fileId}')" style="cursor:pointer">${escapeHtml(name)}</span></td>
+        <td>${size}</td><td>${time}</td>
+        <td class="col-actions">
+          <button class="btn-icon" onclick="downloadFile('${fileId}')" title="下载">⬇️</button>
+          <button class="btn-icon" onclick="showShareModal('${fileId}', '${escapeHtml(name)}')" title="分享">🔗</button>
+          <button class="btn-icon" onclick="deleteFile('${fileId}', '${escapeHtml(name)}')" title="删除">🗑️</button>
+        </td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+}
+
+function enterDir(dirEncoded) {
+  currentDir = decodeURIComponent(dirEncoded);
+  if (!currentDir.endsWith('/')) currentDir += '/';
+  loadFiles();
+}
+
+function toggleView() {
+  viewMode = viewMode === 'grid' ? 'list' : 'grid';
+  document.getElementById('viewToggle').textContent = viewMode === 'grid' ? '⊞' : '☰';
+  loadFiles();
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+// ============================
+// 文件操作
+// ============================
+async function downloadFile(fileIdEncoded) {
+  const fileId = decodeURIComponent(fileIdEncoded);
+  window.open(`${API_BASE}/file/${encodeURIComponent(fileId)}?from=admin`, '_blank');
+}
+
+async function deleteFile(fileIdEncoded, fileName) {
+  if (!confirm(`确定删除 "${fileName}" 吗?`)) return;
+  try {
+    await apiFetch(`${API_BASE}/api/manage/delete/${fileIdEncoded}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    showToast('删除成功', 'success');
+    loadFiles();
+  } catch (err) {
+    showToast('删除失败: ' + err.message, 'error');
+  }
+}
+
+async function showFileMenu(fileIdEncoded, fileName) {
+  // 在 grid 模式下点击文件,弹出操作菜单
+  const fileId = decodeURIComponent(fileIdEncoded);
+  showModal('文件操作', `
+    <div style="text-align:center;margin-bottom:1rem">
+      <div style="font-size:3rem">${getFileIcon(fileName)}</div>
+      <div style="font-weight:600;margin-top:0.5rem">${escapeHtml(fileName)}</div>
+    </div>
+  `, [
+    { text: '⬇️ 下载', onclick: () => { downloadFile(fileIdEncoded); closeModal(); } },
+    { text: '🔗 创建分享', class: 'btn-outline', onclick: () => { closeModal(); showShareModal(fileIdEncoded, fileName); } },
+    { text: '🗑️ 删除', class: 'btn-danger', onclick: () => { closeModal(); deleteFile(fileIdEncoded, fileName); } },
+    { text: '取消', class: 'btn-outline', onclick: closeModal }
+  ]);
+}
+
+// ============================
+// 新建文件夹
+// ============================
+function showCreateDirModal() {
+  showModal('新建文件夹', `
+    <div class="modal-field">
+      <label class="modal-label">文件夹名称</label>
+      <input type="text" class="modal-input" id="dirNameInput" placeholder="输入文件夹名称" autofocus>
+    </div>
+  `, [
+    { text: '取消', class: 'btn-outline', onclick: closeModal },
+    { text: '创建', class: 'btn-primary', onclick: createDirectory }
+  ]);
+  setTimeout(() => document.getElementById('dirNameInput')?.focus(), 100);
+}
+
+async function createDirectory() {
+  const dirName = document.getElementById('dirNameInput').value.trim();
+  if (!dirName) { showToast('请输入文件夹名称', 'warning'); return; }
+  
+  const fullPath = currentDir + dirName;
+  closeModal();
+  
+  try {
+    // 通过上传 .keep 占位文件创建目录
+    const formData = new FormData();
+    formData.append('file', new Blob([''], { type: 'application/octet-stream' }), '.keep');
+    
+    let url = `${API_BASE}/upload?uploadNameType=origin&uploadFolder=${encodeURIComponent(fullPath)}`;
+    await apiFetch(url, { method: 'POST', body: formData, headers: getAuthHeaders() });
+    
+    showToast('文件夹创建成功', 'success');
+    loadFiles();
+  } catch (err) {
+    showToast('创建失败: ' + err.message, 'error');
+  }
+}
+
+// ============================
+// 分片上传
+// ============================
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+});
+
+function handleFileSelect(event) {
+  handleFiles(event.target.files);
+  event.target.value = ''; // reset
+}
+
+async function handleFiles(fileList) {
+  for (const file of fileList) {
+    await uploadFile(file);
+  }
+}
+
+async function uploadFile(file) {
+  const uploadId = `upload-item-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+  const isChunked = file.size > CHUNK_SIZE;
+  
+  // 创建上传项 UI
+  const uploadList = document.getElementById('uploadList');
+  const item = document.createElement('div');
+  item.className = 'upload-item';
+  item.id = uploadId;
+  item.innerHTML = `
+    <div style="font-size:1.5rem">${getFileIcon(file.name)}</div>
+    <div class="upload-item-info">
+      <div class="upload-item-name">${escapeHtml(file.name)}</div>
+      <div class="upload-item-status">${formatSize(file.size)} ${isChunked ? '· 分片上传 ' + totalChunks + ' 片' : '· 直传'}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:0%"></div></div>
+    </div>
+    <div class="upload-item-status" style="min-width:60px;text-align:right">0%</div>
+  `;
+  uploadList.appendChild(item);
+  
+  const updateProgress = (percent, status, done = false, error = false) => {
+    const fill = item.querySelector('.progress-fill');
+    const statusEl = item.querySelectorAll('.upload-item-status')[1];
+    fill.style.width = percent + '%';
+    if (done) fill.classList.add('success');
+    if (error) fill.classList.add('error');
+    statusEl.textContent = Math.round(percent) + '%';
+    if (status) item.querySelectorAll('.upload-item-status')[0].textContent = status;
+  };
+  
+  try {
+    if (isChunked) {
+      await chunkedUpload(file, totalChunks, updateProgress);
+    } else {
+      await directUpload(file, updateProgress);
+    }
+    updateProgress(100, '上传完成', true);
+    showToast(`${file.name} 上传成功`, 'success');
+  } catch (err) {
+    updateProgress(0, '失败: ' + err.message, false, true);
+    showToast(`${file.name} 上传失败: ${err.message}`, 'error');
+  }
+  
+  // 3秒后移除成功项
+  setTimeout(() => {
+    if (item.querySelector('.progress-fill').classList.contains('success')) {
+      item.style.transition = 'opacity 0.5s';
+      item.style.opacity = '0';
+      setTimeout(() => item.remove(), 500);
+    }
+  }, 3000);
+}
+
+async function chunkedUpload(file, totalChunks, updateProgress) {
+  // Step 1: 初始化
+  updateProgress(0, '初始化上传...');
+  let formData = new FormData();
+  formData.append('originalFileName', file.name);
+  formData.append('originalFileType', file.type || 'application/octet-stream');
+  formData.append('totalChunks', totalChunks);
+  
+  const initResp = await apiFetch(`${API_BASE}/upload?initChunked=true&uploadChannel=telegram`, {
+    method: 'POST', body: formData, headers: getAuthHeaders()
+  });
+  
+  const uploadId = initResp.uploadId;
+  
+  // Step 2: 逐片上传(并发 3 片)
+  updateProgress(0, `上传中 0/${totalChunks}`);
+  let uploadedCount = 0;
+  const concurrency = 3;
+  let nextChunk = 0;
+  
+  async function uploadOneChunk() {
+    while (nextChunk < totalChunks) {
+      const chunkIndex = nextChunk++;
+      const start = chunkIndex * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunkBlob = file.slice(start, end);
+      
+      let retry = 0;
+      const maxRetry = 3;
+      while (retry < maxRetry) {
+        try {
+          const chunkFormData = new FormData();
+          chunkFormData.append('file', chunkBlob);
+          chunkFormData.append('chunkIndex', chunkIndex);
+          chunkFormData.append('totalChunks', totalChunks);
+          chunkFormData.append('uploadId', uploadId);
+          chunkFormData.append('originalFileName', file.name);
+          chunkFormData.append('originalFileType', file.type || 'application/octet-stream');
+          
+          await apiFetch(`${API_BASE}/upload?chunked=true&uploadChannel=telegram`, {
+            method: 'POST', body: chunkFormData, headers: getAuthHeaders()
+          });
+          
+          uploadedCount++;
+          const percent = (uploadedCount / totalChunks) * 95;
+          updateProgress(percent, `上传中 ${uploadedCount}/${totalChunks}`);
+          break;
+        } catch (err) {
+          retry++;
+          if (retry >= maxRetry) throw new Error(`分片 ${chunkIndex + 1} 上传失败: ${err.message}`);
+          await new Promise(r => setTimeout(r, 1000 * retry));
+        }
+      }
+    }
+  }
+  
+  // 并发上传
+  const workers = [];
+  for (let i = 0; i < concurrency; i++) workers.push(uploadOneChunk());
+  await Promise.all(workers);
+  
+  // Step 3: 合并
+  updateProgress(96, '合并文件中...');
+  const mergeFormData = new FormData();
+  mergeFormData.append('uploadId', uploadId);
+  mergeFormData.append('totalChunks', totalChunks);
+  mergeFormData.append('originalFileName', file.name);
+  mergeFormData.append('originalFileType', file.type || 'application/octet-stream');
+  
+  // 上传目录
+  if (currentDir) {
+    mergeFormData.append('uploadFolder', currentDir);
+  }
+  
+  await apiFetch(`${API_BASE}/upload?chunked=true&merge=true&uploadChannel=telegram`, {
+    method: 'POST', body: mergeFormData, headers: getAuthHeaders()
+  });
+  
+  updateProgress(99, '完成');
+}
+
+async function directUpload(file, updateProgress) {
+  updateProgress(0, '上传中...');
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  let url = `${API_BASE}/upload?uploadNameType=origin`;
+  if (currentDir) url += `&uploadFolder=${encodeURIComponent(currentDir)}`;
+  
+  // 使用 XMLHttpRequest 跟踪进度
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.upload.addEventListener('progress', e => {
+      if (e.lengthComputable) {
+        updateProgress((e.loaded / e.total) * 95, '上传中...');
+      }
+    });
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const resp = JSON.parse(xhr.responseText);
+          if (Array.isArray(resp) && resp.length > 0 && resp[0].src) {
+            resolve(resp);
+          } else {
+            reject(new Error(resp.error || '上传失败'));
+          }
+        } catch { reject(new Error('解析响应失败')); }
+      } else {
+        reject(new Error(`HTTP ${xhr.status}`));
+      }
+    });
+    xhr.addEventListener('error', () => reject(new Error('网络错误')));
+    xhr.open('POST', url);
+    
+    // 添加认证头
+    const authHeaders = getAuthHeaders();
+    for (const [key, val] of Object.entries(authHeaders)) {
+      xhr.setRequestHeader(key, val);
+    }
+    xhr.send(formData);
+  });
+}
+
+// ============================
+// 分享功能
+// ============================
+function showShareModal(fileIdEncoded, fileName) {
+  shareContext = { fileId: decodeURIComponent(fileIdEncoded), fileName };
+  showModal('创建分享链接', `
+    <div style="text-align:center;margin-bottom:1rem">
+      <div style="font-size:2rem">${getFileIcon(fileName)}</div>
+      <div style="font-weight:600;margin-top:0.3rem">${escapeHtml(fileName)}</div>
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">访问密码(可选)</label>
+      <input type="text" class="modal-input" id="sharePassword" placeholder="留空则公开可访问">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">过期时间</label>
+      <select class="modal-input" id="shareExpiry">
+        <option value="86400">1 天</option>
+        <option value="604800" selected>7 天</option>
+        <option value="2592000">30 天</option>
+        <option value="0">永久</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">下载次数限制(可选)</label>
+      <input type="number" class="modal-input" id="shareLimit" placeholder="留空则不限制" min="1">
+    </div>
+  `, [
+    { text: '取消', class: 'btn-outline', onclick: closeModal },
+    { text: '创建分享', class: 'btn-primary', onclick: createShare }
+  ]);
+}
+
+async function createShare() {
+  if (!shareContext) return;
+  const password = document.getElementById('sharePassword').value.trim() || undefined;
+  const expiresIn = parseInt(document.getElementById('shareExpiry').value) || undefined;
+  const downloadLimit = parseInt(document.getElementById('shareLimit').value) || undefined;
+  
+  closeModal();
+  
+  try {
+    const resp = await apiFetch(`${API_BASE}/api/manage/share/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({
+        fileId: shareContext.fileId,
+        password,
+        expiresIn: expiresIn > 0 ? expiresIn : undefined,
+        downloadLimit
+      })
+    });
+    
+    // 显示分享链接
+    showModal('分享链接已创建', `
+      <div style="text-align:center;margin-bottom:1rem">
+        <div style="font-size:2rem">✅</div>
+        <div style="font-weight:600;margin-top:0.3rem">${escapeHtml(shareContext.fileName)}</div>
+      </div>
+      ${password ? `<div style="margin-bottom:0.5rem;font-size:0.85rem;color:var(--muted)">访问密码: <strong style="color:var(--accent)">${escapeHtml(password)}</strong></div>` : ''}
+      <div class="share-link-box">
+        <input type="text" class="share-link-input" id="shareLinkInput" value="${resp.shareUrl}" readonly>
+        <button class="btn btn-primary btn-sm" onclick="copyShareLink()">复制</button>
+      </div>
+    `, [
+      { text: '关闭', class: 'btn-outline', onclick: closeModal }
+    ]);
+  } catch (err) {
+    showToast('创建分享失败: ' + err.message, 'error');
+  }
+}
+
+function copyShareLink() {
+  const input = document.getElementById('shareLinkInput');
+  input.select();
+  document.execCommand('copy');
+  showToast('链接已复制', 'success');
+}
+
+// ============================
+// 分享管理
+// ============================
+async function loadShares() {
+  const container = document.getElementById('sharesContainer');
+  container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">加载中...</div>';
+  
+  try {
+    const data = await apiFetch(`${API_BASE}/api/manage/share/`, {
+      headers: getAuthHeaders()
+    });
+    
+    const shares = data.shares || [];
+    if (shares.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔗</div><div>暂无分享链接</div><div style="font-size:0.8rem;margin-top:0.5rem">在文件列表中点击分享按钮即可创建</div></div>';
+      return;
+    }
+    
+    let html = '<table class="file-table"><thead><tr><th>文件名</th><th>创建时间</th><th>过期</th><th>下载</th><th>操作</th></tr></thead><tbody>';
+    shares.forEach(share => {
+      const expired = share.expiresAt && Date.now() > share.expiresAt;
+      const expiryText = share.expiresAt ? formatDate(share.expiresAt) : '永久';
+      html += `<tr>
+        <td class="col-name"><span class="col-icon">${getFileIcon(share.fileName)}</span>${escapeHtml(share.fileName)}</td>
+        <td>${formatDate(share.createdAt)}</td>
+        <td>${expired ? '<span style="color:var(--danger)">已过期</span>' : expiryText}</td>
+        <td>${share.downloadCount || 0}${share.downloadLimit ? '/' + share.downloadLimit : ''}</td>
+        <td class="col-actions">
+          <button class="btn-icon" onclick="copyShareUrl('${share.shareId}')" title="复制链接">📋</button>
+          <button class="btn-icon" onclick="deleteShare('${share.shareId}')" title="删除">🗑️</button>
+        </td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>加载失败: ${err.message}</div></div>`;
+  }
+}
+
+function copyShareUrl(shareId) {
+  const url = `${location.origin}/s/${shareId}`;
+  navigator.clipboard.writeText(url).then(() => showToast('链接已复制', 'success'));
+}
+
+async function deleteShare(shareId) {
+  if (!confirm('确定删除此分享链接吗?')) return;
+  try {
+    await apiFetch(`${API_BASE}/api/manage/share/${shareId}`, {
+      method: 'DELETE', headers: getAuthHeaders()
+    });
+    showToast('已删除', 'success');
+    loadShares();
+  } catch (err) {
+    showToast('删除失败: ' + err.message, 'error');
+  }
+}
+
+// ============================
+// 存储统计
+// ============================
+async function loadStorageStats() {
+  try {
+    const data = await apiFetch(`${API_BASE}/api/manage/list?action=info`, {
+      headers: getAuthHeaders()
+    });
+    if (data.totalSizeMB !== undefined) {
+      const totalGB = (data.totalSizeMB / 1024).toFixed(2);
+      const percent = Math.min((data.totalSizeMB / (1024 * 10)) * 100, 100); // 假设 10GB 上限
+      document.getElementById('storageFill').style.width = percent + '%';
+      document.getElementById('storageText').textContent = `${totalGB} GB 已使用`;
+    }
+  } catch {}
+}
+
+// ============================
+// Modal 系统
+// ============================
+function showModal(title, body, buttons) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  const footer = document.getElementById('modalFooter');
+  footer.innerHTML = '';
+  buttons.forEach(btn => {
+    const el = document.createElement('button');
+    el.className = 'btn ' + (btn.class || 'btn-primary');
+    el.textContent = btn.text;
+    el.onclick = btn.onclick;
+    footer.appendChild(el);
+  });
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target.id === 'modalOverlay') closeModal();
+});
+
+// ============================
+// 搜索
+// ============================
+let searchTimer;
+document.getElementById('searchInput').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    if (currentView === 'files') loadFiles();
+  }, 300);
+});
+
+// ============================
+// 初始化 - 先检查登录状态
+// ============================
+(async function init() {
+  const valid = await checkSession();
+  if (valid) {
+    document.getElementById('loginOverlay').style.display = 'none';
+    loadFiles();
+    loadStorageStats();
+  } else {
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('loginAuthCode').focus();
+  }
+})();
+</script>
+</body>
+</html>
