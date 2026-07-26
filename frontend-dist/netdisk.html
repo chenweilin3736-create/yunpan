@@ -1733,14 +1733,17 @@ async function checkSession() {
 // 根据用户身份隐藏/显示管理功能入口
 function applyUserPermissions() {
   const isAdmin = !currentUserInfo || currentUserInfo.role === 'admin';
-  // 管理入口对所有用户可见（子账号仅可访问「安全设置」tab）
+  // 管理入口：管理员显示，子账号隐藏（子账号不需要系统管理/安全设置入口）
   const manageNav = document.querySelector('[data-view="manage"]');
   if (manageNav) {
-    manageNav.style.display = '';
-    // 子账号场景下，导航文字改为「安全设置」更直观
-    manageNav.innerHTML = `<span class="nav-icon">${isAdmin ? '⚙️' : '🔒'}</span>${isAdmin ? '系统管理' : '安全设置'}`;
+    manageNav.style.display = isAdmin ? '' : 'none';
   }
-  // 管理面板 tab 按钮：子账号仅显示「安全设置」
+  // 在线设备：管理员显示，子账号隐藏
+  const devicesNav = document.querySelector('[data-view="devices"]');
+  if (devicesNav) {
+    devicesNav.style.display = isAdmin ? '' : 'none';
+  }
+  // 管理面板 tab 按钮：子账号仅显示「安全设置」（如果通过其他方式打开管理面板）
   const tabOverview = document.getElementById('manageTabOverview');
   const tabUsers = document.getElementById('manageTabUsers');
   const tabLogs = document.getElementById('manageTabLogs');
@@ -1749,7 +1752,6 @@ function applyUserPermissions() {
   if (tabUsers) tabUsers.style.display = isAdmin ? '' : 'none';
   if (tabLogs) tabLogs.style.display = isAdmin ? '' : 'none';
   if (tabSecurity) tabSecurity.style.display = '';
-  // 子账号隐藏分享管理入口（可选，根据需求）
   // 子账号如果没有删除权限，隐藏删除按钮
   if (!isAdmin) {
     const perms = currentUserInfo.permissions || [];
@@ -4632,6 +4634,25 @@ async function clearAllLogs() {
     loadManageLogs();
   } catch (err) { showToast('清空失败: ' + err.message, 'error'); }
 }
+
+// ============================
+// 设备检测 - 手机端自动跳转到 m.html
+// ============================
+(function detectMobile() {
+  // 如果当前已经在手机端页面，不跳转
+  if (window.location.pathname.endsWith('/m.html') || window.location.pathname === '/m.html') return;
+  // URL 参数 ?desktop=1 强制使用桌面版
+  if (new URL(window.location.href).searchParams.get('desktop') === '1') return;
+  // 检测是否为移动设备
+  const ua = navigator.userAgent || '';
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)
+    || (ua.match(/Macintosh/) && navigator.maxTouchPoints > 1) // iPad 桌面模式
+    || (window.innerWidth <= 768 && 'ontouchstart' in window);
+  if (isMobile) {
+    const mUrl = window.location.pathname.replace(/\/netdisk\.html$/, '/m.html').replace(/\/index\.html$/, '/m.html') + window.location.search;
+    window.location.replace(mUrl);
+  }
+})();
 
 // ============================
 // 初始化 - 先检查登录状态
