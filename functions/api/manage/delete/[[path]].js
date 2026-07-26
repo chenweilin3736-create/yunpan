@@ -25,6 +25,9 @@ export async function onRequest(context) {
 
     const url = new URL(request.url);
 
+    // 检查是否为软删除（移入回收站）模式
+    const trashMode = url.searchParams.get('trash') === 'true';
+
     // 读取folder参数，判断是否为文件夹删除请求
     const folder = url.searchParams.get('folder');
     if (folder === 'true') {
@@ -56,7 +59,12 @@ export async function onRequest(context) {
                     const fileId = file.name;
                     const cdnUrl = `https://${url.hostname}/file/${fileId}`;
 
-                    const success = await deleteFile(env, fileId, cdnUrl, url);
+                    let success;
+                    if (trashMode) {
+                        success = await moveToTrash(env, fileId);
+                    } else {
+                        success = await deleteFile(env, fileId, cdnUrl, url);
+                    }
                     if (success) {
                         deletedFiles.push(fileId);
                     } else {
@@ -81,7 +89,8 @@ export async function onRequest(context) {
             return new Response(JSON.stringify({
                 success: true,
                 deleted: deletedFiles,
-                failed: failedFiles
+                failed: failedFiles,
+                trashed: trashMode
             }), {
                 headers: { 'Content-Type': 'application/json', ...corsHeaders }
             });
@@ -96,9 +105,6 @@ export async function onRequest(context) {
             });
         }
     }
-
-    // 检查是否为软删除（移入回收站）模式
-    const trashMode = url.searchParams.get('trash') === 'true';
 
     // 单个文件删除处理
     try {
