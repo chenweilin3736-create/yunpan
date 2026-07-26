@@ -637,6 +637,95 @@ button, .btn, .btn-icon, .nav-item, .crumb, .file-card, .context-menu-item, .dir
 .toast.warning { border-left-color: var(--warning); }
 @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+/* ===== Tags ===== */
+.tag-colors { --tag-red: #ef4444; --tag-orange: #f97316; --tag-amber: #f59e0b; --tag-green: #22c55e; --tag-teal: #14b8a6; --tag-blue: #3b82f6; --tag-indigo: #6366f1; --tag-purple: #a855f7; --tag-pink: #ec4899; --tag-gray: #6b7280; }
+.tag-pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 8px; border-radius: 99px;
+  font-size: 0.65rem; font-weight: 600;
+  line-height: 1.6; white-space: nowrap;
+}
+.tag-pill.removable { cursor: pointer; }
+.tag-pill.removable:hover { filter: brightness(0.85); }
+.tag-pill .tag-remove { font-size: 0.7rem; opacity: 0.6; margin-left: 1px; }
+.tag-pill .tag-remove:hover { opacity: 1; }
+.file-card-tags { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-top: 2px; min-height: 18px; }
+.tag-sidebar-item {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.45rem 0.75rem; border-radius: var(--radius-xs);
+  cursor: pointer; font-size: 0.82rem; font-weight: 500;
+  transition: all 0.15s; color: var(--ink-2);
+}
+.tag-sidebar-item:hover { background: var(--accent-soft); color: var(--accent); }
+.tag-sidebar-item.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+.tag-sidebar-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tag-input-wrapper { position: relative; }
+.tag-suggestions {
+  position: absolute; top: 100%; left: 0; right: 0;
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: var(--radius-xs); box-shadow: var(--shadow-lg);
+  max-height: 180px; overflow-y: auto; z-index: 100;
+  display: none;
+}
+.tag-suggestions.show { display: block; }
+.tag-suggestion-item {
+  padding: 0.4rem 0.75rem; cursor: pointer; font-size: 0.82rem;
+  transition: background 0.1s;
+}
+.tag-suggestion-item:hover { background: var(--accent-light); }
+
+/* ===== Star ===== */
+.star-btn { cursor: pointer; transition: all 0.2s; font-size: 1rem; line-height: 1; }
+.star-btn:hover { transform: scale(1.2); }
+.star-btn.starred { color: var(--warning); }
+.star-btn:not(.starred) { color: var(--rule-2); }
+.file-card .star-btn { position: absolute; top: 8px; left: 32px; z-index: 5; font-size: 0.85rem; }
+
+/* ===== Category Nav ===== */
+.nav-category-icon { font-size: 1.1rem; width: 22px; text-align: center; }
+
+/* ===== Manage Panel ===== */
+.manage-section { margin-bottom: 1.5rem; }
+.manage-section-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--ink); display: flex; align-items: center; gap: 0.5rem; }
+.manage-card {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: var(--radius-sm); padding: 0.875rem;
+  box-shadow: var(--shadow); transition: all 0.2s;
+}
+.manage-card:hover { box-shadow: var(--shadow-md); }
+.manage-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.manage-card-title { font-weight: 600; font-size: 0.88rem; }
+.manage-card-meta { font-size: 0.72rem; color: var(--muted); }
+.manage-card-actions { display: flex; gap: 0.4rem; }
+.user-permission-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
+.perm-tag { padding: 2px 8px; border-radius: 99px; font-size: 0.68rem; font-weight: 600; }
+.perm-tag.read { background: #dbeafe; color: #1d4ed8; }
+.perm-tag.upload { background: #dcfce7; color: #16a34a; }
+.perm-tag.delete { background: #fee2e2; color: #dc2626; }
+.log-item { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid var(--rule); }
+.log-item:last-child { border-bottom: none; }
+.log-icon { font-size: 1.1rem; flex-shrink: 0; width: 28px; text-align: center; }
+.log-content { flex: 1; min-width: 0; }
+.log-text { font-size: 0.82rem; color: var(--ink); }
+.log-detail { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
+.log-time { font-size: 0.68rem; color: var(--rule-2); flex-shrink: 0; }
+.log-action-filter { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.log-filter-btn {
+  padding: 0.3rem 0.7rem; border-radius: 99px; font-size: 0.75rem;
+  border: 1px solid var(--rule); background: var(--surface); cursor: pointer;
+  transition: all 0.15s; font-weight: 500; color: var(--ink-2);
+}
+.log-filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+.log-filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+.stat-card {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: var(--radius-sm); padding: 1rem;
+  box-shadow: var(--shadow); text-align: center;
+}
+.stat-value { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+.stat-label { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; }
+
 /* ===== Empty State ===== */
 .empty-state { text-align: center; padding: 3.5rem 2rem; color: var(--muted); }
 .empty-state-icon { font-size: 3.5rem; margin-bottom: 0.6rem; opacity: 0.6; animation: floatUp 3s ease-in-out infinite; }
@@ -1027,6 +1116,37 @@ button, .btn, .btn-icon, .nav-item, .crumb, .file-card, .context-menu-item, .dir
       </div>
     </div>
     <div class="nav-section">
+      <div class="nav-title">分类</div>
+      <div class="nav-item" data-view="category" data-category="image">
+        <span class="nav-category-icon">🖼️</span>图片
+      </div>
+      <div class="nav-item" data-view="category" data-category="video">
+        <span class="nav-category-icon">🎬</span>视频
+      </div>
+      <div class="nav-item" data-view="category" data-category="document">
+        <span class="nav-category-icon">📄</span>文档
+      </div>
+      <div class="nav-item" data-view="category" data-category="archive">
+        <span class="nav-category-icon">📦</span>压缩包
+      </div>
+      <div class="nav-item" data-view="category" data-category="audio">
+        <span class="nav-category-icon">🎵</span>音频
+      </div>
+    </div>
+    <div class="nav-section" id="tagsNavSection" style="display:none">
+      <div class="nav-title">标签</div>
+      <div id="tagsNavList"></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-title">快捷</div>
+      <div class="nav-item" data-view="starred">
+        <span class="nav-icon">⭐</span>我的收藏
+      </div>
+      <div class="nav-item" data-view="manage">
+        <span class="nav-icon">⚙️</span>系统管理
+      </div>
+    </div>
+    <div class="nav-section">
       <div class="nav-title">上传</div>
       <div class="nav-item" data-view="upload">
         <span class="nav-icon">⬆️</span>上传文件
@@ -1147,6 +1267,61 @@ button, .btn, .btn-icon, .nav-item, .crumb, .file-card, .context-menu-item, .dir
         </div>
         <div id="trashContainer"></div>
       </div>
+
+      <!-- Starred View -->
+      <div id="starredView" class="hidden">
+        <div class="toolbar">
+          <h3 style="font-weight:600;">⭐ 我的收藏</h3>
+          <div class="toolbar-spacer"></div>
+          <button class="btn-refresh" onclick="loadStarred()" title="刷新">🔄</button>
+        </div>
+        <div id="starredContainer"></div>
+      </div>
+
+      <!-- Category View -->
+      <div id="categoryView" class="hidden">
+        <div class="toolbar">
+          <h3 style="font-weight:600;" id="categoryTitle">图片</h3>
+          <div class="toolbar-spacer"></div>
+          <select class="sort-select" id="categorySortBy" onchange="loadCategory()">
+            <option value="">默认排序</option>
+            <option value="name">按名称</option>
+            <option value="size">按大小</option>
+            <option value="time">按时间</option>
+          </select>
+          <select class="sort-select" id="categorySortOrder" onchange="loadCategory()">
+            <option value="desc">降序</option>
+            <option value="asc">升序</option>
+          </select>
+        </div>
+        <div id="categoryContainer"></div>
+      </div>
+
+      <!-- Tag View -->
+      <div id="tagView" class="hidden">
+        <div class="toolbar">
+          <h3 style="font-weight:600;" id="tagViewTitle">标签: </h3>
+          <div class="toolbar-spacer"></div>
+          <button class="btn-refresh" onclick="loadTagView()" title="刷新">🔄</button>
+        </div>
+        <div id="tagContainer"></div>
+      </div>
+
+      <!-- Manage View -->
+      <div id="manageView" class="hidden">
+        <div class="toolbar">
+          <h3 style="font-weight:600;">⚙️ 系统管理</h3>
+          <div class="toolbar-spacer"></div>
+        </div>
+        <div id="manageContainer" style="max-width:900px">
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+            <button class="btn btn-primary btn-sm" onclick="showManageTab('overview')">📊 概览</button>
+            <button class="btn btn-outline btn-sm" onclick="showManageTab('users')">👥 用户管理</button>
+            <button class="btn btn-outline btn-sm" onclick="showManageTab('logs')">📋 操作日志</button>
+          </div>
+          <div id="manageContent"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1183,6 +1358,10 @@ let moveContext = null; // 移动/复制操作的上下文
 let lastRenderedFiles = []; // 最近渲染的文件列表（供批量操作使用）
 let lastRenderedDirs = []; // 最近渲染的目录列表
 let uploadTargetDir = ''; // 上传目标目录（默认跟随 currentDir，可手动修改）
+let currentCategory = 'image';
+let currentTag = '';
+let allKnownTags = [];
+let manageTab = 'overview';
 
 // ============================
 // 工具函数
@@ -1333,19 +1512,28 @@ async function doLogout() {
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => {
     const view = item.dataset.view;
+    const category = item.dataset.category;
+    const tagName = item.dataset.tag;
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     item.classList.add('active');
-    showView(view);
+    if (category) {
+      currentCategory = category;
+      showView('category');
+    } else if (tagName) {
+      currentTag = tagName;
+      showView('tag');
+    } else {
+      showView(view);
+    }
   });
 });
 
 function showView(view) {
   currentView = view;
-  document.getElementById('filesView').classList.add('hidden');
-  document.getElementById('uploadView').classList.add('hidden');
-  document.getElementById('sharesView').classList.add('hidden');
-  document.getElementById('trashView').classList.add('hidden');
-  document.getElementById(view + 'View').classList.remove('hidden');
+  ['filesView','uploadView','sharesView','trashView','starredView','categoryView','tagView','manageView'].forEach(id => {
+    document.getElementById(id)?.classList.add('hidden');
+  });
+  document.getElementById(view + 'View')?.classList.remove('hidden');
   
   // 清除批量选择状态
   clearBatchSelection();
@@ -1353,6 +1541,10 @@ function showView(view) {
   if (view === 'files') loadFiles();
   if (view === 'shares') { loadShares(); updateBadges(); }
   if (view === 'trash') { loadTrash(); updateBadges(); }
+  if (view === 'starred') loadStarred();
+  if (view === 'category') loadCategory();
+  if (view === 'tag') loadTagView();
+  if (view === 'manage') { showManageTab('overview'); }
   if (view === 'upload') {
     uploadTargetDir = currentDir;
     updateUploadTargetDisplay();
@@ -1510,6 +1702,7 @@ function renderFiles(data) {
       const tooltipText = escapeHtml(`${name}\n大小: ${size}\n修改时间: ${time}`);
       html += `<div class="file-card ${isSelected}" onclick="${clickAction}" oncontextmenu="event.preventDefault();showFileContextMenu(event,'${fileId}','${escapeHtml(name)}')">
         <input type="checkbox" class="file-checkbox" ${checked} onclick="event.stopPropagation();toggleFileSelection('${file.name || file.id}')">
+        <span class="star-btn ${(meta.Starred || meta.starred) ? 'starred' : ''}" onclick="event.stopPropagation();toggleStar('${fileId}')" title="收藏">★</span>
         <div class="file-actions">
           <button class="btn-icon" onclick="event.stopPropagation();downloadFile('${fileId}')" title="下载">⬇️</button>
           <button class="btn-icon" onclick="event.stopPropagation();showShareModal('${fileId}', '${escapeHtml(name)}')" title="分享">🔗</button>
@@ -1518,6 +1711,7 @@ function renderFiles(data) {
         ${iconHtml}
         <div class="file-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
         <div class="file-meta"><span>${size}</span><span class="file-meta-time">${time}</span></div>
+        <div class="file-card-tags">${renderFileTags(meta.Tags || [])}</div>
         <div class="file-tooltip">${tooltipText.replace(/\n/g, '<br>')}</div>
       </div>`;
     });
@@ -1727,6 +1921,8 @@ function showFileContextMenu(event, fileIdEncoded, fileName) {
     <div class="context-menu-item" onclick="hideContextMenu();showMoveModal(['${decodeURIComponent(fileIdEncoded)}'],'move')">📂 移动到</div>
     <div class="context-menu-item" onclick="hideContextMenu();showMoveModal(['${decodeURIComponent(fileIdEncoded)}'],'copy')">📋 复制到</div>
     <div class="context-menu-item" onclick="hideContextMenu();showShareModal('${fileIdEncoded}','${escapeHtml(fileName)}')">🔗 分享</div>
+    <div class="context-menu-item" onclick="hideContextMenu();toggleStar('${fileIdEncoded}')">⭐ 收藏</div>
+    <div class="context-menu-item" onclick="hideContextMenu();showTagModal('${fileIdEncoded}','${escapeHtml(fileName)}')">🏷️ 标签管理</div>
     <div class="context-menu-divider"></div>
     <div class="context-menu-item danger" onclick="hideContextMenu();deleteFile('${fileIdEncoded}','${escapeHtml(fileName)}')">🗑️ 删除</div>
   `;
@@ -2871,6 +3067,517 @@ document.getElementById('searchInput').addEventListener('input', () => {
 // ============================
 // 初始化 - 先检查登录状态
 // ============================
+
+// ============================
+// 标签颜色映射
+// ============================
+const TAG_COLORS = ['#ef4444','#f97316','#f59e0b','#22c55e','#14b8a6','#3b82f6','#6366f1','#a855f7','#ec4899','#6b7280'];
+function getTagColor(tag) {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
+}
+function renderFileTags(tags) {
+  if (!tags || !tags.length) return '';
+  return tags.slice(0, 3).map(t => `<span class="tag-pill" style="background:${getTagColor(t)}22;color:${getTagColor(t)}">${escapeHtml(t)}</span>`).join('') + (tags.length > 3 ? `<span class="tag-pill" style="background:var(--rule);color:var(--muted)">+${tags.length-3}</span>` : '');
+}
+
+// ============================
+// 标签管理弹窗
+// ============================
+function showTagModal(fileIdEncoded, fileName) {
+  const fileId = decodeURIComponent(fileIdEncoded);
+  apiFetch(`${API_BASE}/api/manage/tags/${encodeURIComponent(fileId)}`, { headers: getAuthHeaders() })
+    .then(data => {
+      const currentTags = data.tags || [];
+      const tagsHtml = currentTags.map(t => {
+        const c = getTagColor(t);
+        return `<span class="tag-pill removable" style="background:${c}22;color:${c}" onclick="removeTagFromModal(this,'${escapeHtml(t)}')">${escapeHtml(t)}<span class="tag-remove">×</span></span>`;
+      }).join(' ');
+      showModal('🏷️ 标签管理', `
+        <div style="text-align:center;margin-bottom:0.75rem">
+          <div style="font-size:2rem">${getFileIcon(fileName)}</div>
+          <div style="font-weight:600;margin-top:0.3rem;word-break:break-all">${escapeHtml(fileName)}</div>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">当前标签</label>
+          <div id="tagModalTags" style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px;padding:0.5rem;background:var(--surface-2);border-radius:var(--radius-xs);border:1px solid var(--rule)">${tagsHtml || '<span style="color:var(--muted);font-size:0.82rem">暂无标签</span>'}</div>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">添加标签</label>
+          <div class="tag-input-wrapper">
+            <input class="modal-input" id="tagInput" placeholder="输入标签名后回车添加" onkeydown="if(event.key==='Enter'){event.preventDefault();addTagFromModal('${fileIdEncoded}')}" oninput="showTagSuggestions(this.value)">
+            <div class="tag-suggestions" id="tagSuggestions"></div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:0.5rem" id="tagQuickPicks">
+            ${['游戏','工作','素材','重要','个人','学习','参考','临时'].map(t => `<button class="btn btn-outline btn-sm" style="padding:2px 10px;font-size:0.75rem" onclick="document.getElementById('tagInput').value='${t}';addTagFromModal('${fileIdEncoded}')">${t}</button>`).join('')}
+          </div>
+        </div>
+      `, [
+        { text: '取消', class: 'btn-outline', onclick: closeModal },
+        { text: '确定', class: 'btn-primary', onclick: closeModal }
+      ]);
+    })
+    .catch(err => showToast('获取标签失败: ' + err.message, 'error'));
+}
+
+function addTagFromModal(fileIdEncoded) {
+  const input = document.getElementById('tagInput');
+  const tag = input.value.trim();
+  if (!tag) return;
+  const fileId = decodeURIComponent(fileIdEncoded);
+  apiFetch(`${API_BASE}/api/manage/tags/${encodeURIComponent(fileId)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ action: 'add', tags: [tag] })
+  }).then(() => {
+    input.value = '';
+    showTagModal(fileIdEncoded, document.querySelector('#modalBody .file-name, #modalBody div[style*="font-weight:600"]')?.textContent || '');
+    loadFiles();
+  }).catch(err => showToast('添加标签失败: ' + err.message, 'error'));
+}
+
+function removeTagFromModal(el, tag) {
+  const fileIdMatch = el.closest('.modal-overlay')?.querySelector('[onclick*="addTagFromModal"]')?.getAttribute('onclick')?.match(/addTagFromModal\('([^']+)'\)/);
+  if (!fileIdMatch) return;
+  const fileId = decodeURIComponent(fileIdMatch[1]);
+  apiFetch(`${API_BASE}/api/manage/tags/${encodeURIComponent(fileId)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ action: 'remove', tags: [tag] })
+  }).then(() => {
+    showTagModal(fileIdMatch[1], document.querySelector('#modalBody div[style*="font-weight:600"]')?.textContent || '');
+    loadFiles();
+  }).catch(err => showToast('移除标签失败: ' + err.message, 'error'));
+}
+
+function showTagSuggestions(value) {
+  const container = document.getElementById('tagSuggestions');
+  if (!container) return;
+  if (!value.trim()) { container.classList.remove('show'); return; }
+  const suggestions = allKnownTags.filter(t => t.includes(value.toLowerCase())).slice(0, 8);
+  if (!suggestions.length) { container.classList.remove('show'); return; }
+  container.innerHTML = suggestions.map(t => `<div class="tag-suggestion-item" onclick="document.getElementById('tagInput').value='${t}';addTagFromModal(document.querySelector('#modalBody [onclick*=addTagFromModal]')?.getAttribute('onclick')?.match(/addTagFromModal\\('([^']+)'\\)/)?.[1])">${escapeHtml(t)}</div>`).join('');
+  container.classList.add('show');
+}
+
+// 加载侧边栏标签列表
+async function loadTagsNav() {
+  try {
+    const data = await apiFetch(`${API_BASE}/api/manage/list?count=9999`, { headers: getAuthHeaders() });
+    const files = data.files || [];
+    const tagsSet = new Set();
+    files.forEach(f => {
+      const tags = (f.metadata?.Tags || []);
+      tags.forEach(t => tagsSet.add(t.toLowerCase()));
+    });
+    allKnownTags = Array.from(tagsSet).sort();
+    const section = document.getElementById('tagsNavSection');
+    const list = document.getElementById('tagsNavList');
+    if (!section || !list) return;
+    if (allKnownTags.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = allKnownTags.slice(0, 10).map(tag => {
+      const c = getTagColor(tag);
+      return `<div class="tag-sidebar-item" data-tag="${escapeHtml(tag)}" onclick="currentTag='${escapeHtml(tag)}';document.querySelectorAll('.nav-item,.tag-sidebar-item').forEach(n=>n.classList.remove('active'));this.classList.add('active');showView('tag')">
+        <span class="tag-sidebar-dot" style="background:${c}"></span>${escapeHtml(tag)}
+      </div>`;
+    }).join('');
+  } catch {}
+}
+
+function loadTagView() {
+  if (!currentTag) return;
+  document.getElementById('tagViewTitle').textContent = '标签: ' + currentTag;
+  const container = document.getElementById('tagContainer');
+  container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">加载中...</div>';
+  apiFetch(`${API_BASE}/api/manage/list?includeTags=${encodeURIComponent(currentTag)}&count=500`, { headers: getAuthHeaders() })
+    .then(data => {
+      const files = (data.files || []).filter(f => {
+        const tags = (f.metadata?.Tags || []).map(t => t.toLowerCase());
+        return tags.includes(currentTag.toLowerCase());
+      });
+      data.files = files;
+      data.directories = [];
+      renderFilesToContainer(data, container);
+    })
+    .catch(err => { container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>加载失败: ${err.message}</div></div>`; });
+}
+
+// ============================
+// 星标收藏
+// ============================
+async function toggleStar(fileIdEncoded) {
+  const fileId = decodeURIComponent(fileIdEncoded);
+  try {
+    const info = await apiFetch(`${API_BASE}/api/manage/star/${encodeURIComponent(fileId)}`, { headers: getAuthHeaders() });
+    const newStarred = !info.starred;
+    await apiFetch(`${API_BASE}/api/manage/star/${encodeURIComponent(fileId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ starred: newStarred })
+    });
+    showToast(newStarred ? '已收藏' : '已取消收藏', 'success');
+    document.querySelectorAll(`.star-btn[onclick*="${fileIdEncoded}"]`).forEach(btn => {
+      btn.classList.toggle('starred', newStarred);
+    });
+  } catch (err) {
+    showToast('操作失败: ' + err.message, 'error');
+  }
+}
+
+function loadStarred() {
+  const container = document.getElementById('starredContainer');
+  container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">加载中...</div>';
+  apiFetch(`${API_BASE}/api/manage/star?action=list`, { headers: getAuthHeaders() })
+    .then(data => {
+      const files = data.files || [];
+      if (!files.length) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⭐</div><div>暂无收藏文件</div><div class="empty-state-sub">点击文件卡片上的 ★ 即可收藏</div></div>';
+        return;
+      }
+      renderFilesToContainer({ files, directories: [] }, container);
+    })
+    .catch(err => { container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>加载失败: ${err.message}</div></div>`; });
+}
+
+// ============================
+// 自动分类
+// ============================
+const CATEGORY_CONFIG = {
+  image: { title: '🖼️ 图片', exts: ['jpg','jpeg','png','gif','webp','svg','bmp','ico','tiff'], mime: 'image/' },
+  video: { title: '🎬 视频', exts: ['mp4','avi','mov','mkv','webm','flv','wmv','m4v','ogv'], mime: 'video/' },
+  document: { title: '📄 文档', exts: ['pdf','doc','docx','txt','md','rtf','odt','xls','xlsx','csv','ppt','pptx','html','xml','json'], mime: null },
+  archive: { title: '📦 压缩包', exts: ['zip','rar','7z','tar','gz','bz2','xz','iso','dmg'], mime: null },
+  audio: { title: '🎵 音频', exts: ['mp3','wav','flac','ogg','aac','opus','wma','m4a'], mime: 'audio/' }
+};
+
+function loadCategory() {
+  const config = CATEGORY_CONFIG[currentCategory];
+  if (!config) return;
+  document.getElementById('categoryTitle').textContent = config.title;
+  const container = document.getElementById('categoryContainer');
+  container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">加载中...</div>';
+  const sortBy = document.getElementById('categorySortBy')?.value;
+  const sortOrder = document.getElementById('categorySortOrder')?.value;
+  let url = `${API_BASE}/api/manage/list?count=500&recursive=true`;
+  if (sortBy) url += `&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+  apiFetch(url, { headers: getAuthHeaders() })
+    .then(data => {
+      const filtered = (data.files || []).filter(f => {
+        const name = (f.metadata?.FileName || f.name || '').toLowerCase();
+        const ext = name.split('.').pop();
+        const fileType = f.metadata?.FileType || '';
+        if (config.exts.includes(ext)) return true;
+        if (config.mime && fileType.startsWith(config.mime)) return true;
+        return false;
+      });
+      const result = { files: filtered, directories: [] };
+      renderFilesToContainer(result, container);
+    })
+    .catch(err => { container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>加载失败: ${err.message}</div></div>`; });
+}
+
+// 通用文件渲染到指定容器
+function renderFilesToContainer(data, container) {
+  const files = data.files || [];
+  if (files.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>暂无文件</div></div>';
+    return;
+  }
+  let html = '<div class="file-grid">';
+  files.forEach(file => {
+    const meta = file.metadata || file;
+    const name = meta.FileName || file.name?.split('/').pop() || '未知';
+    const size = meta.FileSizeBytes ? formatSize(parseInt(meta.FileSizeBytes)) : (meta.FileSize ? meta.FileSize + ' MB' : '');
+    const time = formatDate(meta.TimeStamp);
+    const fileId = encodeURIComponent(file.name || file.id);
+    const fileType = meta.FileType || '';
+    const isImage = fileType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name);
+    const isVideo = fileType.startsWith('video/') || /\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/i.test(name);
+    const thumbUrl = isImage ? `${API_BASE}/file/${fileId}?from=admin` : '';
+    const iconHtml = isImage
+      ? `<div class="file-thumb" style="background-image:url('${thumbUrl}')"></div>`
+      : `<div class="file-icon">${getFileIcon(name, fileType)}</div>`;
+    const clickAction = isImage ? `previewFile('${fileId}', '${escapeHtml(name)}', 'image')` : (isVideo ? `previewFile('${fileId}', '${escapeHtml(name)}', 'video')` : `showFileMenu('${fileId}', '${escapeHtml(name)}')`);
+    const isStarred = meta.Starred || meta.starred;
+    html += `<div class="file-card" onclick="${clickAction}" oncontextmenu="event.preventDefault();showFileContextMenu(event,'${fileId}','${escapeHtml(name)}')">
+      <span class="star-btn ${isStarred ? 'starred' : ''}" onclick="event.stopPropagation();toggleStar('${fileId}')" title="收藏">★</span>
+      <div class="file-actions">
+        <button class="btn-icon" onclick="event.stopPropagation();downloadFile('${fileId}')" title="下载">⬇️</button>
+        <button class="btn-icon" onclick="event.stopPropagation();showShareModal('${fileId}', '${escapeHtml(name)}')" title="分享">🔗</button>
+        <button class="btn-icon" onclick="event.stopPropagation();showFileContextMenu(event,'${fileId}','${escapeHtml(name)}')" title="更多">⋯</button>
+      </div>
+      ${iconHtml}
+      <div class="file-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
+      <div class="file-meta"><span>${size}</span><span class="file-meta-time">${time}</span></div>
+      <div class="file-card-tags">${renderFileTags(meta.Tags || [])}</div>
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ============================
+// 系统管理
+// ============================
+function showManageTab(tab) {
+  manageTab = tab;
+  const container = document.getElementById('manageContent');
+  const btns = container?.parentElement?.querySelectorAll('button[onclick*="showManageTab"]');
+  btns?.forEach(btn => {
+    const isCurrent = btn.getAttribute('onclick').includes(`'${tab}'`);
+    btn.className = isCurrent ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+  });
+  if (tab === 'overview') loadManageOverview();
+  else if (tab === 'users') loadManageUsers();
+  else if (tab === 'logs') loadManageLogs();
+}
+
+async function loadManageOverview() {
+  const container = document.getElementById('manageContent');
+  container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">加载中...</div>';
+  try {
+    const data = await apiFetch(`${API_BASE}/api/manage/stats?action=overview`, { headers: getAuthHeaders() });
+    let html = '<div class="stats-grid">';
+    const stats = [
+      { value: data.totalFiles || 0, label: '总文件数', icon: '📁' },
+      { value: data.totalSize || '0 B', label: '总存储量', icon: '💾' },
+      { value: data.starredFiles || 0, label: '收藏文件', icon: '⭐' },
+      { value: data.activeShares || 0, label: '活跃分享', icon: '🔗' },
+      { value: data.trashFiles || 0, label: '回收站文件', icon: '🗑️' },
+      { value: data.users || 0, label: '子账号数', icon: '👥' },
+    ];
+    stats.forEach(s => {
+      html += `<div class="stat-card"><div style="font-size:1.5rem;margin-bottom:0.3rem">${s.icon}</div><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div></div>`;
+    });
+    html += '</div>';
+    if (data.storageByType && Object.keys(data.storageByType).length > 0) {
+      html += '<div class="manage-section"><div class="manage-section-title">📊 存储分布</div><div class="manage-card">';
+      for (const [type, size] of Object.entries(data.storageByType)) {
+        html += `<div style="display:flex;justify-content:space-between;padding:0.3rem 0;font-size:0.84rem;border-bottom:1px solid var(--rule)"><span>${type}</span><span style="font-weight:600">${size}</span></div>`;
+      }
+      html += '</div></div>';
+    }
+    if (data.recentLogs && data.recentLogs.length > 0) {
+      html += '<div class="manage-section"><div class="manage-section-title">📋 最近操作</div><div class="manage-card">';
+      data.recentLogs.slice(0, 5).forEach(log => {
+        const icon = { upload:'⬆️', delete:'🗑️', download:'⬇️', share:'🔗', login:'🔑', rename:'✏️', move:'📂', copy:'📋' }[log.action] || '📝';
+        html += `<div class="log-item"><div class="log-icon">${icon}</div><div class="log-content"><div class="log-text">${escapeHtml(log.details || log.action)}</div><div class="log-detail">${escapeHtml(log.username || '管理员')}${log.fileName ? ' · ' + escapeHtml(log.fileName) : ''}</div></div><div class="log-time">${formatDate(log.timestamp)}</div></div>`;
+      });
+      html += '</div></div>';
+    }
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>加载失败: ${err.message}</div></div>`;
+  }
+}
+
+async function loadManageUsers() {
+  const container = document.getElementById('manageContent');
+  container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">加载中...</div>';
+  try {
+    const data = await apiFetch(`${API_BASE}/api/manage/users`, { headers: getAuthHeaders() });
+    const users = data.users || [];
+    let html = `<div class="manage-section"><div class="manage-section-title" style="justify-content:space-between"><span>👥 子账号列表 (${users.length})</span><button class="btn btn-primary btn-sm" onclick="showCreateUserModal()">+ 新建子账号</button></div>`;
+    if (!users.length) {
+      html += '<div style="text-align:center;padding:2rem;color:var(--muted)">暂无子账号</div>';
+    } else {
+      users.forEach(u => {
+        const statusColor = u.enabled ? 'var(--success)' : 'var(--muted)';
+        const statusText = u.enabled ? '启用' : '禁用';
+        html += `<div class="manage-card" style="margin-bottom:0.5rem">
+          <div class="manage-card-header">
+            <div><span class="manage-card-title">${escapeHtml(u.displayName || u.username)}</span><span style="color:var(--muted);font-size:0.78rem;margin-left:0.5rem">@${escapeHtml(u.username)}</span></div>
+            <div class="manage-card-actions">
+              <button class="btn btn-outline btn-sm" onclick="showEditUserModal('${escapeHtml(u.username)}')">✏️ 编辑</button>
+              <button class="btn btn-outline btn-sm" onclick="toggleUserStatus('${escapeHtml(u.username)}')">${u.enabled ? '⏸️ 禁用' : '▶️ 启用'}</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteUser('${escapeHtml(u.username)}')">🗑️</button>
+            </div>
+          </div>
+          <div class="user-permission-tags">${(u.permissions || []).map(p => `<span class="perm-tag ${p}">${p === 'read' ? '只读' : p === 'upload' ? '上传' : p === 'delete' ? '删除' : p}</span>`).join('')}</div>
+          <div class="manage-card-meta">状态: <span style="color:${statusColor};font-weight:600">${statusText}</span>${u.quota ? ` · 配额: ${u.quota}MB` : ''}${u.allowedDirs?.length ? ` · 目录: ${u.allowedDirs.map(d => escapeHtml(d || '/')).join(', ')}` : ''}</div>
+        </div>`;
+      });
+    }
+    html += '</div>';
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>加载失败: ${err.message}</div></div>`;
+  }
+}
+
+function showCreateUserModal() {
+  showModal('新建子账号', `
+    <div class="modal-field"><label class="modal-label">用户名 *</label><input class="modal-input" id="newUsername" placeholder="小写字母、数字"></div>
+    <div class="modal-field"><label class="modal-label">密码 *</label><input class="modal-input" id="newPassword" type="password" placeholder="至少6位"></div>
+    <div class="modal-field"><label class="modal-label">显示名称</label><input class="modal-input" id="newDisplayName" placeholder="可选"></div>
+    <div class="modal-field"><label class="modal-label">存储配额 (MB, 0=无限)</label><input class="modal-input" id="newQuota" type="number" value="0"></div>
+    <div class="modal-field">
+      <label class="modal-label">权限</label>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:0.3rem">
+        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.85rem;cursor:pointer"><input type="checkbox" id="permRead" checked> 只读</label>
+        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.85rem;cursor:pointer"><input type="checkbox" id="permUpload" checked> 上传</label>
+        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.85rem;cursor:pointer"><input type="checkbox" id="permDelete"> 删除</label>
+      </div>
+    </div>
+    <div class="modal-field"><label class="modal-label">允许访问的目录 (每行一个, 留空=全部)</label><textarea class="modal-input" id="newDirs" rows="3" placeholder="docs&#10;photos"></textarea></div>
+  `, [
+    { text: '取消', class: 'btn-outline', onclick: closeModal },
+    { text: '创建', class: 'btn-primary', onclick: doCreateUser }
+  ]);
+}
+
+async function doCreateUser() {
+  const username = document.getElementById('newUsername').value.trim();
+  const password = document.getElementById('newPassword').value;
+  const displayName = document.getElementById('newDisplayName').value.trim();
+  const quota = parseInt(document.getElementById('newQuota').value) || 0;
+  const permissions = [];
+  if (document.getElementById('permRead').checked) permissions.push('read');
+  if (document.getElementById('permUpload').checked) permissions.push('upload');
+  if (document.getElementById('permDelete').checked) permissions.push('delete');
+  const dirsRaw = document.getElementById('newDirs').value.trim();
+  const allowedDirs = dirsRaw ? dirsRaw.split('\n').map(d => d.trim()).filter(Boolean) : [];
+  if (!username || !password) { showToast('用户名和密码必填', 'warning'); return; }
+  if (password.length < 6) { showToast('密码至少6位', 'warning'); return; }
+  try {
+    await apiFetch(`${API_BASE}/api/manage/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ username, password, displayName, quota, permissions, allowedDirs, enabled: true })
+    });
+    showToast('子账号创建成功', 'success');
+    closeModal();
+    loadManageUsers();
+  } catch (err) { showToast('创建失败: ' + err.message, 'error'); }
+}
+
+function showEditUserModal(username) {
+  apiFetch(`${API_BASE}/api/manage/users/${encodeURIComponent(username)}`, { headers: getAuthHeaders() })
+    .then(user => {
+      showModal('编辑子账号', `
+        <div class="modal-field"><label class="modal-label">用户名</label><input class="modal-input" value="${escapeHtml(user.username)}" disabled style="opacity:0.6"></div>
+        <div class="modal-field"><label class="modal-label">显示名称</label><input class="modal-input" id="editDisplayName" value="${escapeHtml(user.displayName || '')}"></div>
+        <div class="modal-field"><label class="modal-label">新密码 (留空不修改)</label><input class="modal-input" id="editPassword" type="password" placeholder="留空不修改"></div>
+        <div class="modal-field"><label class="modal-label">存储配额 (MB, 0=无限)</label><input class="modal-input" id="editQuota" type="number" value="${user.quota || 0}"></div>
+        <div class="modal-field">
+          <label class="modal-label">权限</label>
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:0.3rem">
+            <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.85rem;cursor:pointer"><input type="checkbox" id="editPermRead" ${(user.permissions||[]).includes('read')?'checked':''}> 只读</label>
+            <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.85rem;cursor:pointer"><input type="checkbox" id="editPermUpload" ${(user.permissions||[]).includes('upload')?'checked':''}> 上传</label>
+            <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.85rem;cursor:pointer"><input type="checkbox" id="editPermDelete" ${(user.permissions||[]).includes('delete')?'checked':''}> 删除</label>
+          </div>
+        </div>
+        <div class="modal-field"><label class="modal-label">允许访问的目录 (每行一个)</label><textarea class="modal-input" id="editDirs" rows="3">${(user.allowedDirs||[]).join('\n')}</textarea></div>
+      `, [
+        { text: '取消', class: 'btn-outline', onclick: closeModal },
+        { text: '保存', class: 'btn-primary', onclick: () => doEditUser(username) }
+      ]);
+    })
+    .catch(err => showToast('获取用户信息失败: ' + err.message, 'error'));
+}
+
+async function doEditUser(username) {
+  const displayName = document.getElementById('editDisplayName').value.trim();
+  const password = document.getElementById('editPassword').value;
+  const quota = parseInt(document.getElementById('editQuota').value) || 0;
+  const permissions = [];
+  if (document.getElementById('editPermRead').checked) permissions.push('read');
+  if (document.getElementById('editPermUpload').checked) permissions.push('upload');
+  if (document.getElementById('editPermDelete').checked) permissions.push('delete');
+  const dirsRaw = document.getElementById('editDirs').value.trim();
+  const allowedDirs = dirsRaw ? dirsRaw.split('\n').map(d => d.trim()).filter(Boolean) : [];
+  const body = { displayName, quota, permissions, allowedDirs };
+  if (password) body.password = password;
+  try {
+    await apiFetch(`${API_BASE}/api/manage/users/${encodeURIComponent(username)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(body)
+    });
+    showToast('更新成功', 'success');
+    closeModal();
+    loadManageUsers();
+  } catch (err) { showToast('更新失败: ' + err.message, 'error'); }
+}
+
+async function toggleUserStatus(username) {
+  try {
+    await apiFetch(`${API_BASE}/api/manage/users/${encodeURIComponent(username)}?action=toggle`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    showToast('状态已切换', 'success');
+    loadManageUsers();
+  } catch (err) { showToast('操作失败: ' + err.message, 'error'); }
+}
+
+async function deleteUser(username) {
+  if (!confirm(`确定删除子账号 "${username}" 吗？此操作不可恢复！`)) return;
+  try {
+    await apiFetch(`${API_BASE}/api/manage/users/${encodeURIComponent(username)}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    showToast('已删除', 'success');
+    loadManageUsers();
+  } catch (err) { showToast('删除失败: ' + err.message, 'error'); }
+}
+
+// ============================
+// 操作日志
+// ============================
+let logFilter = '';
+async function loadManageLogs() {
+  const container = document.getElementById('manageContent');
+  container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">加载中...</div>';
+  try {
+    let url = `${API_BASE}/api/manage/logs?limit=100`;
+    if (logFilter) url += `&action=${encodeURIComponent(logFilter)}`;
+    const data = await apiFetch(url, { headers: getAuthHeaders() });
+    const logs = data.logs || [];
+    const actionIcons = { upload:'⬆️', delete:'🗑️', download:'⬇️', share:'🔗', login:'🔑', rename:'✏️', move:'📂', copy:'📋', config_change:'⚙️', user_create:'👤', user_delete:'👤' };
+    let html = `<div class="manage-section">
+      <div class="manage-section-title" style="justify-content:space-between"><span>📋 操作日志 (${data.total || logs.length})</span>
+        <button class="btn btn-danger btn-sm" onclick="clearAllLogs()">清空日志</button>
+      </div>
+      <div class="log-action-filter">
+        <button class="log-filter-btn ${!logFilter?'active':''}" onclick="logFilter='';loadManageLogs()">全部</button>
+        <button class="log-filter-btn ${logFilter==='upload'?'active':''}" onclick="logFilter='upload';loadManageLogs()">上传</button>
+        <button class="log-filter-btn ${logFilter==='delete'?'active':''}" onclick="logFilter='delete';loadManageLogs()">删除</button>
+        <button class="log-filter-btn ${logFilter==='download'?'active':''}" onclick="logFilter='download';loadManageLogs()">下载</button>
+        <button class="log-filter-btn ${logFilter==='share'?'active':''}" onclick="logFilter='share';loadManageLogs()">分享</button>
+        <button class="log-filter-btn ${logFilter==='login'?'active':''}" onclick="logFilter='login';loadManageLogs()">登录</button>
+      </div>`;
+    if (!logs.length) {
+      html += '<div style="text-align:center;padding:2rem;color:var(--muted)">暂无操作日志</div>';
+    } else {
+      html += '<div class="manage-card">';
+      logs.forEach(log => {
+        html += `<div class="log-item"><div class="log-icon">${actionIcons[log.action] || '📝'}</div><div class="log-content"><div class="log-text">${escapeHtml(log.details || log.action)}</div><div class="log-detail">${escapeHtml(log.username || '管理员')}${log.fileName ? ' · ' + escapeHtml(log.fileName) : ''}${log.ip ? ' · ' + escapeHtml(log.ip) : ''}</div></div><div class="log-time">${formatDate(log.timestamp)}</div></div>`;
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>加载失败: ${err.message}</div></div>`;
+  }
+}
+
+async function clearAllLogs() {
+  if (!confirm('确定清空所有操作日志？此操作不可恢复！')) return;
+  try {
+    await apiFetch(`${API_BASE}/api/manage/logs?action=clear`, { method: 'DELETE', headers: getAuthHeaders() });
+    showToast('日志已清空', 'success');
+    loadManageLogs();
+  } catch (err) { showToast('清空失败: ' + err.message, 'error'); }
+}
+
+// ============================
+// 初始化 - 先检查登录状态
+// ============================
 (async function init() {
   const valid = await checkSession();
   if (valid) {
@@ -2878,6 +3585,7 @@ document.getElementById('searchInput').addEventListener('input', () => {
     loadFiles();
     loadStorageStats();
     updateBadges();
+    loadTagsNav();
   } else {
     document.getElementById('loginOverlay').style.display = 'flex';
     document.getElementById('loginAuthCode').focus();
