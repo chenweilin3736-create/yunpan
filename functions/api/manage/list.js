@@ -239,13 +239,31 @@ export async function onRequest(context) {
         if (!result.success) {
             const dbRecords = await getAllFileRecords(context.env, dir);
 
+            // 子账号：在 KV fallback 路径也需要过滤
+            let filteredDbDirs = dbRecords.directories;
+            let filteredDbFiles = dbRecords.files;
+            if (isSubAccount) {
+                const allowedDirs = Array.isArray(currentUser.allowedDirs) ? currentUser.allowedDirs : [];
+                const normalizedAllowed = allowedDirs.map(d => d.replace(/^\/+|\/+$/g, ''));
+                const isFullAccess = normalizedAllowed.length === 0 || normalizedAllowed.includes('');
+                if (!isFullAccess) {
+                    // 根目录下：只显示允许的目录，隐藏散落文件
+                    if (dir === '') {
+                        filteredDbDirs = dbRecords.directories.filter(d => {
+                            return normalizedAllowed.some(allowed => d === allowed || d.startsWith(allowed + '/'));
+                        });
+                        filteredDbFiles = []; // 根目录不允许散落文件
+                    }
+                }
+            }
+
             return new Response(JSON.stringify({
-                files: dbRecords.files,
-                directories: dbRecords.directories,
-                totalCount: dbRecords.totalCount,
-                directFileCount: dbRecords.directFileCount,
-                directFolderCount: dbRecords.directFolderCount,
-                returnedCount: dbRecords.returnedCount,
+                files: filteredDbFiles,
+                directories: filteredDbDirs,
+                totalCount: filteredDbFiles.length + filteredDbDirs.length,
+                directFileCount: filteredDbFiles.length,
+                directFolderCount: filteredDbDirs.length,
+                returnedCount: filteredDbFiles.length + filteredDbDirs.length,
                 indexLastUpdated: Date.now(),
                 isIndexedResponse: false // 标记这是来自 KV 的响应
             }), {
@@ -261,17 +279,21 @@ export async function onRequest(context) {
             result.files.map(file => serializeFileRecordForManagement(db, context.env, file, metadataViewContext))
         );
 
-        // 子账号：过滤掉不在 allowedDirs 范围内的目录
+        // 子账号：过滤掉不在 allowedDirs 范围内的目录和文件
         let filteredDirectories = result.directories;
         let filteredFiles = compatibleFiles;
         if (isSubAccount) {
             const allowedDirs = Array.isArray(currentUser.allowedDirs) ? currentUser.allowedDirs : [];
             const normalizedAllowed = allowedDirs.map(d => d.replace(/^\/+|\/+$/g, ''));
-            // 根目录下只显示允许的目录
-            if (dir === '') {
-                filteredDirectories = result.directories.filter(d => {
-                    return normalizedAllowed.some(allowed => d === allowed || d.startsWith(allowed + '/'));
-                });
+            const isFullAccess = normalizedAllowed.length === 0 || normalizedAllowed.includes('');
+            if (!isFullAccess) {
+                // 根目录下：只显示允许的目录，隐藏散落文件
+                if (dir === '') {
+                    filteredDirectories = result.directories.filter(d => {
+                        return normalizedAllowed.some(allowed => d === allowed || d.startsWith(allowed + '/'));
+                    });
+                    filteredFiles = []; // 根目录不允许显示散落文件
+                }
             }
         }
 

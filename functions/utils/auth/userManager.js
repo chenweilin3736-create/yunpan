@@ -104,7 +104,7 @@ export async function createUser(db, userData) {
         passwordHash: hash,
         salt,
         displayName: displayName || username,
-        allowedDirs: Array.isArray(allowedDirs) ? allowedDirs : ['/'],
+        allowedDirs: (Array.isArray(allowedDirs) && allowedDirs.length > 0) ? allowedDirs : ['/'],
         quota: typeof quota === 'number' && quota > 0 ? quota : 1024,
         quotaUsed: 0,
         permissions: Array.isArray(permissions) ? permissions.filter(p => VALID_PERMISSIONS.includes(p)) : ['read'],
