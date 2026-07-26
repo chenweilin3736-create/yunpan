@@ -130,29 +130,28 @@ export async function onRequest(context) {
         const hasFullAccess = allowedDirs.length === 0 || allowedDirs.includes('/');
         
         if (!hasFullAccess && allowedDirs.length > 0) {
-            // 检查请求的目录是否在允许范围内
-            const requestedDir = dir;
-            const isAllowed = allowedDirs.some(allowed => {
-                const normAllowed = allowed.replace(/^\/+|\/+$/g, '');
-                if (normAllowed === '') return true; // '/' 表示全部允许
-                // 允许访问该目录及其子目录
-                return requestedDir === normAllowed + '/' ||
-                       requestedDir.startsWith(normAllowed + '/');
-            });
-            if (!isAllowed) {
-                // 不在允许范围内，返回空结果
-                return new Response(JSON.stringify({
-                    files: [],
-                    directories: [],
-                    totalCount: 0,
-                    directFileCount: 0,
-                    directFolderCount: 0,
-                    returnedCount: 0,
-                    restricted: true,
-                    message: '您没有访问该目录的权限'
-                }), {
-                    headers: { "Content-Type": "application/json", ...corsHeaders }
+            // 根目录请求放行（后续过滤逻辑会只显示允许的目录入口）
+            // 只拦截明确不在范围内的子目录请求
+            if (dir !== '') {
+                const isAllowed = allowedDirs.some(allowed => {
+                    const normAllowed = allowed.replace(/^\/+|\/+$/g, '');
+                    if (normAllowed === '') return true;
+                    return dir.startsWith(normAllowed + '/');
                 });
+                if (!isAllowed) {
+                    return new Response(JSON.stringify({
+                        files: [],
+                        directories: [],
+                        totalCount: 0,
+                        directFileCount: 0,
+                        directFolderCount: 0,
+                        returnedCount: 0,
+                        restricted: true,
+                        message: '您没有访问该目录的权限'
+                    }), {
+                        headers: { "Content-Type": "application/json", ...corsHeaders }
+                    });
+                }
             }
         }
     }
