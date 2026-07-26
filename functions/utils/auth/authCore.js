@@ -21,8 +21,8 @@ export const AUTH_SCOPE = {
     EITHER: 'either',
 };
 
-const AUTHORIZED = (authType) => ({ authorized: true, authType });
-const UNAUTHORIZED = { authorized: false, authType: null };
+const AUTHORIZED = (authType, session = null) => ({ authorized: true, authType, session });
+const UNAUTHORIZED = { authorized: false, authType: null, session: null };
 
 /**
  * 管理员会话认证
@@ -38,7 +38,7 @@ async function checkAdmin({ env, request, adminConfigured }) {
 
     const session = await validateSession(env, request, 'admin');
     if (session.valid) {
-        return AUTHORIZED('admin');
+        return AUTHORIZED('admin', session.session);
     }
 
     return null;
@@ -55,13 +55,13 @@ async function checkUser({ env, request, url, authCodeConfigured, userAuthCode }
     // admin session（管理员身份也可访问用户资源）
     const adminSession = await validateSession(env, request, 'admin');
     if (adminSession.valid) {
-        return AUTHORIZED('admin');
+        return AUTHORIZED('admin', adminSession.session);
     }
 
     // user session
     const userSession = await validateSession(env, request, 'user');
     if (userSession.valid) {
-        return AUTHORIZED('user');
+        return AUTHORIZED('user', userSession.session);
     }
 
     // authCode

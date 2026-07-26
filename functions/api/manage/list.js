@@ -17,6 +17,28 @@ export async function onRequest(context) {
     const { request, waitUntil } = context;
     const url = new URL(request.url);
 
+    // 子账号目录访问控制：强制将请求目录限制在 allowedDirs 范围内
+    const currentUser = context.currentUser;
+    const isSubAccount = currentUser && context.authType === 'user';
+    if (isSubAccount) {
+        const allowedDirs = Array.isArray(currentUser.allowedDirs) ? currentUser.allowedDirs : [];
+        // 如果 allowedDirs 为空数组，子账号无权访问任何目录
+        if (allowedDirs.length === 0) {
+            return new Response(JSON.stringify({
+                files: [],
+                directories: [],
+                totalCount: 0,
+                directFileCount: 0,
+                directFolderCount: 0,
+                returnedCount: 0,
+                restricted: true,
+                message: '您没有访问任何目录的权限'
+            }), {
+                headers: { "Content-Type": "application/json", ...corsHeaders }
+            });
+        }
+    }
+
     // 解析查询参数
     let start = parseInt(url.searchParams.get('start'), 10) || 0;
     let count = parseInt(url.searchParams.get('count'), 10) || 50;
@@ -77,6 +99,37 @@ export async function onRequest(context) {
     }
     if (dir && !dir.endsWith('/')) {
         dir += '/';
+    }
+
+    // 子账号目录强制过滤：确保请求目录在 allowedDirs 范围内
+    if (isSubAccount) {
+        const allowedDirs = Array.isArray(currentUser.allowedDirs) ? currentUser.allowedDirs : [];
+        if (allowedDirs.length > 0) {
+            // 检查请求的目录是否在允许范围内
+            const requestedDir = dir;
+            const isAllowed = allowedDirs.some(allowed => {
+                const normAllowed = allowed.replace(/^\/+|\/+$/g, '');
+                // 允许访问该目录及其子目录
+                return requestedDir === '' + normAllowed + '/' ||
+                       requestedDir.startsWith(normAllowed + '/') ||
+                       requestedDir === '' && normAllowed === '';
+            });
+            if (!isAllowed) {
+                // 不在允许范围内，返回空结果
+                return new Response(JSON.stringify({
+                    files: [],
+                    directories: [],
+                    totalCount: 0,
+                    directFileCount: 0,
+                    directFolderCount: 0,
+                    returnedCount: 0,
+                    restricted: true,
+                    message: '您没有访问该目录的权限'
+                }), {
+                    headers: { "Content-Type": "application/json", ...corsHeaders }
+                });
+            }
+        }
     }
 
     try {
@@ -208,9 +261,23 @@ export async function onRequest(context) {
             result.files.map(file => serializeFileRecordForManagement(db, context.env, file, metadataViewContext))
         );
 
+        // 子账号：过滤掉不在 allowedDirs 范围内的目录
+        let filteredDirectories = result.directories;
+        let filteredFiles = compatibleFiles;
+        if (isSubAccount) {
+            const allowedDirs = Array.isArray(currentUser.allowedDirs) ? currentUser.allowedDirs : [];
+            const normalizedAllowed = allowedDirs.map(d => d.replace(/^\/+|\/+$/g, ''));
+            // 根目录下只显示允许的目录
+            if (dir === '') {
+                filteredDirectories = result.directories.filter(d => {
+                    return normalizedAllowed.some(allowed => d === allowed || d.startsWith(allowed + '/'));
+                });
+            }
+        }
+
         return new Response(JSON.stringify({
-            files: compatibleFiles,
-            directories: result.directories,
+            files: filteredFiles,
+            directories: filteredDirectories,
             totalCount: result.totalCount,
             directFileCount: result.directFileCount,
             directFolderCount: result.directFolderCount,

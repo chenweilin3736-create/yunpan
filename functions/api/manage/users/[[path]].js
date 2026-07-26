@@ -122,6 +122,8 @@ async function handleGetSelf(db, env, request) {
         if (username) {
             const user = await getUser(db, username);
             if (user) {
+                // 添加 role 标识，便于前端区分
+                user.role = 'user';
                 return jsonRes({ success: true, user });
             }
         }

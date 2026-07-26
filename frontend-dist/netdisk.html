@@ -1366,6 +1366,7 @@ let currentView = 'files';
 let viewMode = 'grid'; // grid | list
 let shareContext = null; // 用于分享弹窗的上下文
 let isLoggedIn = false; // 登录状态
+let currentUserInfo = null; // 当前用户信息（子账号登录后填充）
 let selectedFiles = new Set(); // 批量选择的文件ID集合
 let moveContext = null; // 移动/复制操作的上下文
 let lastRenderedFiles = []; // 最近渲染的文件列表（供批量操作使用）
@@ -1451,6 +1452,14 @@ async function checkSession() {
     const data = await resp.json();
     if (data.valid) {
       isLoggedIn = true;
+      // 获取当前用户信息
+      try {
+        const userResp = await apiFetch(`${API_BASE}/api/manage/users?action=self`, { headers: getAuthHeaders() });
+        if (userResp && userResp.user) {
+          currentUserInfo = userResp.user;
+          applyUserPermissions();
+        }
+      } catch {}
       return true;
     }
     // 未配置认证时直接放行
@@ -1464,6 +1473,28 @@ async function checkSession() {
     // 接口异常时假设未认证,显示登录
     isLoggedIn = false;
     return false;
+  }
+}
+
+// 根据用户身份隐藏/显示管理功能入口
+function applyUserPermissions() {
+  const isAdmin = !currentUserInfo || currentUserInfo.role === 'admin';
+  // 子账号隐藏管理入口
+  const manageNav = document.querySelector('[data-view="manage"]');
+  if (manageNav) manageNav.style.display = isAdmin ? '' : 'none';
+  // 子账号隐藏分享管理入口（可选，根据需求）
+  // 子账号如果没有删除权限，隐藏删除按钮
+  if (!isAdmin) {
+    const perms = currentUserInfo.permissions || [];
+    if (!perms.includes('delete')) {
+      document.querySelectorAll('[onclick*="batchDelete"], [onclick*="deleteFile"], [onclick*="deleteDir"], [onclick*="emptyTrash"]').forEach(el => el.style.display = 'none');
+    }
+    if (!perms.includes('upload')) {
+      document.querySelectorAll('[onclick*="showUploadView"], [onclick*="showCreateDirModal"]').forEach(el => el.style.display = 'none');
+    }
+    // 子账号隐藏侧边栏用户名
+    const userNameEl = document.querySelector('.sidebar-user-name');
+    if (userNameEl) userNameEl.textContent = currentUserInfo.displayName || currentUserInfo.username || '子账号';
   }
 }
 
@@ -1545,11 +1576,17 @@ async function doSubLogin() {
     if (resp.ok) {
       isLoggedIn = true;
       document.getElementById('loginOverlay').style.display = 'none';
+      // 获取子账号用户信息
+      try {
+        const userResp = await apiFetch(`${API_BASE}/api/manage/users?action=self`, { headers: getAuthHeaders() });
+        if (userResp && userResp.user) {
+          currentUserInfo = userResp.user;
+          applyUserPermissions();
+        }
+      } catch {}
       loadFiles();
       loadStorageStats();
-      updateBadges();
-      loadTagsNav();
-      showToast(`欢迎, ${username}`, 'success');
+      showToast(`欢迎, ${currentUserInfo?.displayName || username}`, 'success');
     } else {
       const data = await resp.json().catch(() => ({}));
       errEl.textContent = data.error || `登录失败 (HTTP ${resp.status})`;
