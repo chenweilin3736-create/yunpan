@@ -18,6 +18,7 @@ import {
     resolveWebDAVCredentials,
 } from '../utils/metadata/channelCredentials.js';
 import { buildCdnFileUrl } from '../utils/metadata/metadataView.js';
+import { buildE2EEResponseHeaders } from '../utils/e2ee.js';
 
 
 export async function onRequest(context) {  // Contents of context object
@@ -87,7 +88,7 @@ export async function onRequest(context) {  // Contents of context object
 
     /* Cloudflare R2渠道 */
     if (imgRecord.metadata?.Channel === 'CloudflareR2') {
-        return await handleR2File(context, fileId, encodedFileName, fileType);
+        return await handleR2File(context, fileId, encodedFileName, fileType, imgRecord.metadata);
     }
 
     /* S3渠道 */
@@ -169,7 +170,7 @@ export async function onRequest(context) {  // Contents of context object
         }
 
         const headers = new Headers(response.headers);
-        setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context));
+        setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context), null);
 
         const newRes = new Response(response.body, {
             status: response.status,
@@ -275,9 +276,9 @@ async function handleTelegramChunkedFile(context, imgRecord, encodedFileName, fi
     // 计算文件总大小
     const totalSize = chunks.reduce((total, chunk) => total + (chunk.size || 0), 0);
 
-    // 构建响应头
+    // 构建响应头（Telegram 分片流）
     const headers = new Headers();
-    setCommonHeaders(headers, encodedFileName, fileType, getChunkedFileCacheControl(context));
+    setCommonHeaders(headers, encodedFileName, fileType, getChunkedFileCacheControl(context), buildE2EEResponseHeaders(metadata));
     headers.set('Content-Length', totalSize.toString());
 
     // 添加ETag支持
@@ -469,9 +470,9 @@ async function handleDiscordChunkedFile(context, imgRecord, encodedFileName, fil
     // 计算文件总大小
     const totalSize = chunks.reduce((total, chunk) => total + (chunk.size || 0), 0);
 
-    // 构建响应头
+    // 构建响应头（Telegram 分片流）
     const headers = new Headers();
-    setCommonHeaders(headers, encodedFileName, fileType, getChunkedFileCacheControl(context));
+    setCommonHeaders(headers, encodedFileName, fileType, getChunkedFileCacheControl(context), buildE2EEResponseHeaders(metadata));
     headers.set('Content-Length', totalSize.toString());
 
     // 添加ETag支持
@@ -638,7 +639,7 @@ async function fetchDiscordChunkWithRetry(botToken, channelId, chunk, proxyUrl, 
 }
 
 // 处理R2文件读取
-async function handleR2File(context, fileId, encodedFileName, fileType) {
+async function handleR2File(context, fileId, encodedFileName, fileType, metadata) {
     const { env, request, url, Referer } = context;
 
     try {
@@ -683,7 +684,7 @@ async function handleR2File(context, fileId, encodedFileName, fileType) {
 
         const headers = new Headers();
         object.writeHttpMetadata(headers);
-        setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context));
+        setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context), buildE2EEResponseHeaders(metadata));
 
         // 处理HEAD请求
         if (request.method === 'HEAD') {
@@ -721,10 +722,10 @@ async function handleS3File(context, metadata, encodedFileName, fileType) {
     // 如果配置了 CDN 文件路径，通过 CDN 读取文件
     if (cdnFileUrl) {
         try {
-            // 处理 HEAD 请求
+            // 处理 HEAD 请求（S3 渠道）
             if (request.method === 'HEAD') {
                 const headers = new Headers();
-                setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context));
+                setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context), buildE2EEResponseHeaders(metadata));
                 return handleHeadRequest(headers);
             }
 
@@ -749,9 +750,9 @@ async function handleS3File(context, metadata, encodedFileName, fileType) {
                 return await handleS3FileViaAPI(context, metadata, encodedFileName, fileType);
             }
 
-            // 构建响应头
+            // 构建响应头（S3 CDN 直读成功）
             const headers = new Headers();
-            setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context));
+            setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context), buildE2EEResponseHeaders(metadata));
 
             // 复制相关头部
             if (response.headers.get('Content-Length')) {
@@ -823,9 +824,9 @@ async function handleS3FileViaAPI(context, metadata, encodedFileName, fileType) 
         const command = new GetObjectCommand(commandParams);
         const response = await s3Client.send(command);
 
-        // 设置响应头
+        // 设置响应头（S3 API 直连）
         const headers = new Headers();
-        setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context));
+        setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context), buildE2EEResponseHeaders(metadata));
 
         // 设置Content-Length和Content-Range头
         if (response.ContentLength) {
@@ -877,10 +878,10 @@ async function handleDiscordFile(context, metadata, encodedFileName, fileType) {
             fileUrl = fileUrl.replace('https://cdn.discordapp.com', `https://${discordCredentials.proxyUrl}`);
         }
 
-        // 处理 HEAD 请求
+        // 处理 HEAD 请求（Discord 渠道）
         if (request.method === 'HEAD') {
             const headers = new Headers();
-            setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context));
+            setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context), buildE2EEResponseHeaders(metadata));
             return handleHeadRequest(headers);
         }
 
@@ -902,7 +903,7 @@ async function handleDiscordFile(context, metadata, encodedFileName, fileType) {
 
         // 构建响应头
         const headers = new Headers();
-        setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context));
+        setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context), buildE2EEResponseHeaders(metadata));
 
         // 复制相关头部
         if (response.headers.get('Content-Length')) {
@@ -943,10 +944,10 @@ async function handleHuggingFaceFile(context, metadata, encodedFileName, fileTyp
         const fileUrl = `https://huggingface.co/datasets/${hfRepo}/resolve/main/${hfFilePath}`;
         const fileSize = HuggingFaceAPI.getMetadataFileSize(metadata);
 
-        // 处理 HEAD 请求
+        // 处理 HEAD 请求（HuggingFace 渠道）
         if (request.method === 'HEAD') {
             const headers = new Headers();
-            setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context));
+            setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context), buildE2EEResponseHeaders(metadata));
             if (fileSize) {
                 headers.set('Content-Length', fileSize.toString());
             }
@@ -978,7 +979,7 @@ async function handleHuggingFaceFile(context, metadata, encodedFileName, fileTyp
 
         // 构建响应头
         const headers = new Headers();
-        setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context));
+        setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context), buildE2EEResponseHeaders(metadata));
 
         // 复制相关头部
         if (response.headers.get('Content-Length')) {
@@ -1014,7 +1015,7 @@ async function handleWebDAVFile(context, metadata, encodedFileName, fileType) {
         }
 
         const headers = new Headers();
-        setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context));
+        setCommonHeaders(headers, encodedFileName, fileType, getFileCacheControl(context), buildE2EEResponseHeaders(metadata));
 
         const fetchHeaders = {};
         const range = request.headers.get('Range');

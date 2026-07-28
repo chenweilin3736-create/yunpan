@@ -55,7 +55,8 @@ export const FILE_CACHE_CONTROL = {
 };
 
 // 公共响应头设置函数
-export function setCommonHeaders(headers, encodedFileName, fileType, cacheControl = FILE_CACHE_CONTROL.PUBLIC) {
+// 额外参数 extraHeaders：用于传入 E2EE 标记头等自定义 header（键值对，值均为字符串）
+export function setCommonHeaders(headers, encodedFileName, fileType, cacheControl = FILE_CACHE_CONTROL.PUBLIC, extraHeaders = null) {
     headers.set('Content-Disposition', `inline; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`);
     headers.set('Access-Control-Allow-Origin', '*');
     headers.set('Accept-Ranges', 'bytes');
@@ -66,6 +67,17 @@ export function setCommonHeaders(headers, encodedFileName, fileType, cacheContro
     }
 
     headers.set('Cache-Control', cacheControl || FILE_CACHE_CONTROL.PUBLIC);
+
+    // 合并 E2EE / 自定义额外 headers
+    if (extraHeaders && typeof extraHeaders === 'object') {
+        for (const [k, v] of Object.entries(extraHeaders)) {
+            if (v !== undefined && v !== null && v !== '') {
+                try {
+                    headers.set(k, String(v));
+                } catch (_) { /* 非法 header 名忽略 */ }
+            }
+        }
+    }
 }
 
 // 设置Range请求相关头部

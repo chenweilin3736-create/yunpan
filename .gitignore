@@ -11,3 +11,8 @@ node_modules
 .vscode/
 .claude/
 .agents/
+.iso-git/
+.trae-html-share-packages/
+.idea/
+node_modules/
+*.log

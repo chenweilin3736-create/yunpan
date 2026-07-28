@@ -13,6 +13,11 @@ import { HuggingFaceAPI } from "../utils/storage/huggingfaceAPI";
 import { WebDAVAPI } from "../utils/storage/webdavAPI";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getDatabase } from '../utils/databaseAdapter.js';
+import {
+  extractE2EEFields,
+  resolveE2EEPolicy,
+  applyE2EEToMetadata,
+} from '../utils/e2ee.js';
 
 
 export async function onRequest(context) {  // Contents of context object
@@ -76,13 +81,24 @@ export async function onRequest(context) {  // Contents of context object
 
 // 通用文件上传处理函数
 async function processFileUpload(context, formdata = null) {
-    const { request, url } = context;
+    const { request, url, env } = context;
 
     // 解析表单数据
     formdata = formdata || await request.formData();
 
     // 将 formdata 存储在 context 中
     context.formdata = formdata;
+
+    /* ========== E2EE 策略解析（在使用 file/metadata 之前尽早完成） ========== */
+    const e2eeFields = extractE2EEFields(formdata);
+    const e2eePolicy = await resolveE2EEPolicy(env, e2eeFields);
+    context.e2eePolicy = e2eePolicy;
+    context.e2eeFields = e2eeFields;
+
+    // 管理员强制 E2EE 但客户端未加密 → 直接拒绝
+    if (!e2eePolicy.valid) {
+        return createResponse('Error: E2EE policy violation - admin has forced end-to-end encryption', { status: 400 });
+    }
 
     // 获得上传渠道类型
     const urlParamUploadChannel = url.searchParams.get('uploadChannel');
@@ -133,7 +149,7 @@ async function processFileUpload(context, formdata = null) {
     // 获取文件信息
     const time = new Date().getTime();
     const file = formdata.get('file');
-    const fileType = file.type;
+    let fileType = file.type;
     let fileName = file.name;
     const fileSizeBytes = file.size; // 文件大小，单位字节
     const fileSize = (fileSizeBytes / 1024 / 1024).toFixed(2); // 文件大小，单位MB
@@ -143,9 +159,27 @@ async function processFileUpload(context, formdata = null) {
         return createResponse('Error: fileType or fileName is wrong, check the integrity of this file!', { status: 400 });
     }
 
-    // 提取图片尺寸
+    // E2EE 场景下：文件已在前端加密为密文（application/octet-stream），
+    // 此时后端无法读取 EXIF 来取图片尺寸，优先用前端预计算值
     let imageDimensions = null;
-    if (fileType.startsWith('image/')) {
+    if (e2eePolicy.clientEnabled) {
+        const e2eeW = formdata.get('e2eeImageWidth');
+        const e2eeH = formdata.get('e2eeImageHeight');
+        if (e2eeW && e2eeH) {
+            const w = parseInt(e2eeW);
+            const h = parseInt(e2eeH);
+            if (!Number.isNaN(w) && !Number.isNaN(h) && w > 0 && h > 0) {
+                imageDimensions = { width: w, height: h };
+            }
+        }
+        // 前端加密时的"原始文件名/类型"优先
+        if (e2eeFields.e2eeOriginalFileName) {
+            fileName = e2eeFields.e2eeOriginalFileName;
+        }
+        // 如果后端拿到的是 octet-stream，而原始类型在 e2ee 字段中也记录了，
+        // 此处仍用 file.type（密文类型）写入 metadata.FileType（便于传输）
+        // 原始类型存在 OriginalFileType
+    } else if (fileType.startsWith('image/')) {
         try {
             // 统一读取 64KB，足以覆盖 JPEG 的 EXIF 数据和其他格式
             const headerBuffer = await file.slice(0, 65536).arrayBuffer();
@@ -186,6 +220,14 @@ async function processFileUpload(context, formdata = null) {
         metadata.Height = imageDimensions.height;
     }
 
+    /* ========== 将 E2EE 字段合并进 metadata（并做二次校验） ========== */
+    const e2eeApplied = await applyE2EEToMetadata(metadata, e2eeFields, e2eePolicy);
+    if (!e2eeApplied.ok) {
+        return createResponse(`Error: E2EE metadata validation failed - ${e2eeApplied.error}`, { status: 400 });
+    }
+    // 替换为合并后的 metadata（包含 Encrypted / OriginalFileType 等字段）
+    const finalMetadata = e2eeApplied.metadata;
+
     const fileExt = resolveFileExt(fileName, fileType);
 
     // 构建文件ID
@@ -206,15 +248,18 @@ async function processFileUpload(context, formdata = null) {
     const urlPrefix = urlPrefixConfig?.value || '';
     context.publicUrl = urlPrefix ? `${urlPrefix.replace(/\/+$/, '')}/${fullId}` : '';
 
+    // 把 finalMetadata 存入 context，供下面各渠道 upload 函数共用
+    context.metadata = finalMetadata;
+
     /* ====================================不同渠道上传======================================= */
     // 出错是否切换渠道自动重试，默认开启
     const autoRetry = url.searchParams.get('autoRetry') === 'false' ? false : true;
 
     let err = '';
-    // 上传到不同渠道
+    // 上传到不同渠道（注意：使用 finalMetadata，里面已包含 Encrypted/OriginalFileType 等 E2EE 字段）
     if (uploadChannel === 'CloudflareR2') {
         // -------------CloudFlare R2 渠道---------------
-        const res = await uploadFileToCloudflareR2(context, fullId, metadata, returnLink);
+        const res = await uploadFileToCloudflareR2(context, fullId, finalMetadata, returnLink);
         if (res.status === 200 || !autoRetry) {
             return res;
         } else {
@@ -222,7 +267,7 @@ async function processFileUpload(context, formdata = null) {
         }
     } else if (uploadChannel === 'S3') {
         // ---------------------S3 渠道------------------
-        const res = await uploadFileToS3(context, fullId, metadata, returnLink);
+        const res = await uploadFileToS3(context, fullId, finalMetadata, returnLink);
         if (res.status === 200 || !autoRetry) {
             return res;
         } else {
@@ -230,7 +275,7 @@ async function processFileUpload(context, formdata = null) {
         }
     } else if (uploadChannel === 'Discord') {
         // ---------------------Discord 渠道------------------
-        const res = await uploadFileToDiscord(context, fullId, metadata, returnLink);
+        const res = await uploadFileToDiscord(context, fullId, finalMetadata, returnLink);
         if (res.status === 200 || !autoRetry) {
             return res;
         } else {
@@ -238,7 +283,7 @@ async function processFileUpload(context, formdata = null) {
         }
     } else if (uploadChannel === 'HuggingFace') {
         // ---------------------HuggingFace 渠道------------------
-        const res = await uploadFileToHuggingFace(context, fullId, metadata, returnLink);
+        const res = await uploadFileToHuggingFace(context, fullId, finalMetadata, returnLink);
         if (res.status === 200 || !autoRetry) {
             return res;
         } else {
@@ -246,7 +291,7 @@ async function processFileUpload(context, formdata = null) {
         }
     } else if (uploadChannel === 'WebDAV') {
         // ---------------------WebDAV 渠道------------------
-        const res = await uploadFileToWebDAV(context, fullId, metadata, returnLink);
+        const res = await uploadFileToWebDAV(context, fullId, finalMetadata, returnLink);
         if (res.status === 200 || !autoRetry) {
             return res;
         } else {
@@ -254,11 +299,11 @@ async function processFileUpload(context, formdata = null) {
         }
     } else if (uploadChannel === 'External') {
         // --------------------外链渠道----------------------
-        const res = await uploadFileToExternal(context, fullId, metadata, returnLink);
+        const res = await uploadFileToExternal(context, fullId, finalMetadata, returnLink);
         return res;
     } else {
         // ----------------Telegram New 渠道-------------------
-        const res = await uploadFileToTelegram(context, fullId, metadata, fileExt, fileName, fileType, returnLink);
+        const res = await uploadFileToTelegram(context, fullId, finalMetadata, fileExt, fileName, fileType, returnLink);
         if (res.status === 200 || !autoRetry) {
             return res;
         } else {
@@ -266,8 +311,8 @@ async function processFileUpload(context, formdata = null) {
         }
     }
 
-    // 上传失败，开始自动切换渠道重试
-    const res = await tryRetry(err, context, uploadChannel, fullId, metadata, fileExt, fileName, fileType, returnLink);
+    // 上传失败，开始自动切换渠道重试（同样用 finalMetadata）
+    const res = await tryRetry(err, context, uploadChannel, fullId, finalMetadata, fileExt, fileName, fileType, returnLink);
     return res;
 }
 
@@ -318,10 +363,14 @@ async function uploadFileToCloudflareR2(context, fullId, metadata, returnLink) {
     metadata.Channel = "CloudflareR2";
     metadata.ChannelName = r2Channel.name || "R2_env";
 
-    // 图像审查，采用R2的publicUrl
-    const R2PublicUrl = r2Channel.publicUrl;
-    let moderateUrl = `${R2PublicUrl}/${fullId}`;
-    metadata.Label = await moderateContent(env, moderateUrl);
+    // 图像审查，采用R2的publicUrl（E2EE 加密文件跳过审查：密文不可识别，且语义上服务器不应接触内容）
+    if (metadata.Encrypted !== true) {
+        const R2PublicUrl = r2Channel.publicUrl;
+        let moderateUrl = `${R2PublicUrl}/${fullId}`;
+        metadata.Label = await moderateContent(env, moderateUrl);
+    } else {
+        metadata.Label = "None";
+    }
 
     // 写入数据库
     try {
@@ -405,8 +454,8 @@ async function uploadFileToS3(context, fullId, metadata, returnLink) {
         metadata.ChannelName = s3Channel.name;
         metadata.S3FileKey = s3FileName;
 
-        // 图像审查
-        if (uploadModerate && uploadModerate.enabled) {
+        // 图像审查（E2EE 加密文件跳过审查：密文不可识别，语义上服务器不应接触内容）
+        if (metadata.Encrypted !== true && uploadModerate && uploadModerate.enabled) {
             try {
                 await db.put(fullId, "", { metadata });
             } catch {
@@ -416,6 +465,8 @@ async function uploadFileToS3(context, fullId, metadata, returnLink) {
             const moderateUrl = `https://${url.hostname}/file/${fullId}`;
             await purgeCDNCache(env, moderateUrl, url);
             metadata.Label = await moderateContent(env, moderateUrl);
+        } else if (metadata.Encrypted === true) {
+            metadata.Label = "None";
         }
 
         // 写入数据库
@@ -524,10 +575,14 @@ async function uploadFileToTelegram(context, fullId, metadata, fileExt, fileName
         res = buildUploadResponse(context, returnLink);
 
 
-        // 图像审查（使用代理域名或官方域名）
-        const moderateDomain = tgProxyUrl ? `https://${tgProxyUrl}` : 'https://api.telegram.org';
-        const moderateUrl = `${moderateDomain}/file/bot${tgBotToken}/${filePath}`;
-        metadata.Label = await moderateContent(env, moderateUrl);
+        // 图像审查（使用代理域名或官方域名），E2EE 加密文件跳过
+        if (metadata.Encrypted !== true) {
+            const moderateDomain = tgProxyUrl ? `https://${tgProxyUrl}` : 'https://api.telegram.org';
+            const moderateUrl = `${moderateDomain}/file/bot${tgBotToken}/${filePath}`;
+            metadata.Label = await moderateContent(env, moderateUrl);
+        } else {
+            metadata.Label = "None";
+        }
 
         // 更新metadata，写入KV数据库
         try {
@@ -643,12 +698,16 @@ async function uploadFileToDiscord(context, fullId, metadata, returnLink) {
         // 注意：不存储 DiscordAttachmentUrl，因为 Discord 附件 URL 会在约24小时后过期
         // 读取时会通过 API 获取新的 URL
 
-        // 图像审查（使用 Discord CDN URL 或代理 URL）
-        let moderateUrl = fileInfo.url;
-        if (discordChannel.proxyUrl) {
-            moderateUrl = fileInfo.url.replace('https://cdn.discordapp.com', `https://${discordChannel.proxyUrl}`);
+        // 图像审查（使用 Discord CDN URL 或代理 URL），E2EE 加密文件跳过
+        if (metadata.Encrypted !== true) {
+            let moderateUrl = fileInfo.url;
+            if (discordChannel.proxyUrl) {
+                moderateUrl = fileInfo.url.replace('https://cdn.discordapp.com', `https://${discordChannel.proxyUrl}`);
+            }
+            metadata.Label = await moderateContent(env, moderateUrl);
+        } else {
+            metadata.Label = "None";
         }
-        metadata.Label = await moderateContent(env, moderateUrl);
 
         // 写入 KV 数据库
         try {
@@ -742,11 +801,13 @@ async function uploadFileToHuggingFace(context, fullId, metadata, returnLink) {
         metadata.ChannelName = hfChannel.name || "HuggingFace_env";
         metadata.HfFilePath = hfFilePath;
 
-        // 图像审查
+        // 图像审查（E2EE 加密文件跳过：密文不可识别，且语义上服务器不应接触内容）
         const securityConfig = context.securityConfig;
         const uploadModerate = securityConfig.upload?.moderate;
         
-        if (uploadModerate && uploadModerate.enabled) {
+        if (metadata.Encrypted === true) {
+            metadata.Label = "None";
+        } else if (uploadModerate && uploadModerate.enabled) {
             if (!hfChannel.isPrivate) {
                 // 公开仓库：直接通过公开URL访问进行审查，只写入1次KV
                 metadata.Label = await moderateContent(env, result.fileUrl);
@@ -826,7 +887,10 @@ async function uploadFileToWebDAV(context, fullId, metadata, returnLink) {
             : '';
 
         const uploadModerate = securityConfig.upload?.moderate;
-        if (uploadModerate && uploadModerate.enabled) {
+        // E2EE 加密文件跳过内容审查（密文不可识别，语义上服务器不应接触内容）
+        if (metadata.Encrypted === true) {
+            metadata.Label = "None";
+        } else if (uploadModerate && uploadModerate.enabled) {
             if (webdavPublicUrl) {
                 metadata.Label = await moderateContent(env, webdavPublicUrl);
             } else {

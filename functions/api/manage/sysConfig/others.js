@@ -129,5 +129,24 @@ export async function getOthersConfig(db, env) {
         fixed: false,
     }
 
+    // 端到端加密（E2EE）配置
+    // 真正的 E2EE 中，服务器端从不持有用户密钥；此处仅做策略控制
+    const kvE2EE = settingsKV.e2ee || {}
+    settings.e2ee = {
+        // 管理员强制启用：所有上传必须加密（前端校验）
+        forceEnabled: kvE2EE.forceEnabled ?? false,
+        // 管理员建议默认值：新会话是否默认勾选加密（用户可在前端覆盖）
+        defaultEnabled: kvE2EE.defaultEnabled ?? false,
+        // 允许用户选择不加密（forceEnabled=true 时此字段无效）
+        allowUserOptOut: kvE2EE.allowUserOptOut ?? true,
+        // 最小密码长度（前端校验用，服务器端不存密码）
+        minPasswordLength: kvE2EE.minPasswordLength ?? 8,
+        // 加密算法标识（用于未来算法升级时的向后兼容）
+        algorithm: kvE2EE.algorithm ?? 'AES-GCM-256',
+        // PBKDF2 迭代次数（前端密钥派生用，影响性能与安全性）
+        pbkdf2Iterations: kvE2EE.pbkdf2Iterations ?? 600000,
+        fixed: false,
+    }
+
     return settings;
 }

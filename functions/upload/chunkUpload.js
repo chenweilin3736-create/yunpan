@@ -5,6 +5,7 @@ import { DiscordAPI } from '../utils/storage/discordAPI';
 import { S3Client, CreateMultipartUploadCommand, UploadPartCommand, AbortMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { getDatabase, checkDatabaseConfig } from '../utils/databaseAdapter.js';
 import { fetchPageConfig } from '../utils/sysConfig.js';
+import { extractE2EEFields, resolveE2EEPolicy } from '../utils/e2ee.js';
 
 // 初始化分块上传
 export async function initializeChunkedUpload(context) {
@@ -21,6 +22,13 @@ export async function initializeChunkedUpload(context) {
 
         if (!originalFileName || !originalFileType || !totalChunks) {
             return createResponse('Error: Missing initialization parameters', { status: 400 });
+        }
+
+        // E2EE：尽早解析策略并在会话中保存加密字段（后续 chunkMerge 中应用到最终 metadata）
+        const e2eeFields = extractE2EEFields(formdata);
+        const e2eePolicy = await resolveE2EEPolicy(env, e2eeFields);
+        if (e2eePolicy.error) {
+            return createResponse(`Error: E2EE policy check failed - ${e2eePolicy.error}`, { status: 400 });
         }
 
         // 生成唯一的 uploadId
@@ -52,7 +60,11 @@ export async function initializeChunkedUpload(context) {
             ipAddress,
             status: 'initialized',
             createdAt: timestamp,
-            expiresAt: timestamp + 3600000 // 1小时过期
+            expiresAt: timestamp + 3600000, // 1小时过期
+            // E2EE 相关字段（仅持久化客户端提交的非敏感字段，密钥/密码绝不落库）
+            e2ee: {
+                fields: e2eeFields,
+            },
         };
 
         // 保存会话信息

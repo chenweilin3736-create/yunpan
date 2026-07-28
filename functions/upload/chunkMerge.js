@@ -4,6 +4,7 @@ import { retryFailedChunks, cleanupFailedMultipartUploads, checkChunkUploadStatu
 import { S3Client, CompleteMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { getDatabase } from '../utils/databaseAdapter.js';
 import { fetchPageConfig } from '../utils/sysConfig.js';
+import { resolveE2EEPolicy, applyE2EEToMetadata } from '../utils/e2ee.js';
 
 // 处理分块合并
 export async function handleChunkMerge(context) {
@@ -158,6 +159,7 @@ async function startMerge(context, uploadId, totalChunks, originalFileName, orig
 // 基于渠道的合并处理
 async function handleChannelBasedMerge(context, uploadId, totalChunks, originalFileName, originalFileType, uploadChannel) {
     const { request, env, url } = context;
+    const db = getDatabase(env);
 
     try {
         // 获得上传IP
@@ -165,8 +167,8 @@ async function handleChannelBasedMerge(context, uploadId, totalChunks, originalF
 
         const normalizedFolder = sanitizeUploadFolder(url.searchParams.get('uploadFolder') || '');
 
-        // 构建基础metadata
-        const metadata = {
+        // 构建基础metadata（用 let，因为 E2EE 会用新对象替换）
+        let metadata = {
             FileName: originalFileName,
             FileType: originalFileType,
             FileSize: '0', // 会在最终合并后更新
@@ -178,6 +180,28 @@ async function handleChannelBasedMerge(context, uploadId, totalChunks, originalF
             Directory: normalizedFolder === '' ? '' : normalizedFolder + '/',
             Tags: []
         };
+
+        // E2EE：从会话中提取加密字段并应用策略（防御性二次校验，避免会话期间配置被篡改）
+        try {
+            const sessionKey = `upload_session_${uploadId}`;
+            const sessionData = await db.get(sessionKey);
+            const sessionInfo = sessionData ? JSON.parse(sessionData) : null;
+            const e2eeFields = (sessionInfo && sessionInfo.e2ee && sessionInfo.e2ee.fields) || {};
+            const e2eePolicy = await resolveE2EEPolicy(env, e2eeFields);
+            if (e2eePolicy.error) {
+                throw new Error(e2eePolicy.error);
+            }
+            const e2eeApplied = await applyE2EEToMetadata(metadata, e2eeFields, e2eePolicy);
+            if (!e2eeApplied.ok) {
+                throw new Error(e2eeApplied.error);
+            }
+            metadata = e2eeApplied.metadata;
+        } catch (e2eeErr) {
+            return {
+                success: false,
+                error: `E2EE metadata validation failed - ${e2eeErr.message}`
+            };
+        }
 
         // 收集所有已上传的分块信息
         const chunkStatuses = await checkChunkUploadStatuses(env, uploadId, totalChunks);

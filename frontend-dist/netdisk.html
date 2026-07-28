@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -2264,15 +2264,90 @@ function escapeHtml(str) {
 // ============================
 // 文件操作
 // ============================
-async function downloadFile(fileIdEncoded) {
+
+// 读取文件：如果是 E2EE 加密的，先 fetch + 解密再返回 {blob, headers}
+// 非加密文件直接返回 {blob, headers}
+async function fetchAndMaybeDecrypt(fileIdEncoded, { forDownload = false, expectedName = null} = {}) {
   const fileId = decodeURIComponent(fileIdEncoded);
-  window.open(`${API_BASE}/file/${encodeURIComponent(fileId)}?from=admin`, '_blank');
+  const fileUrl = `${API_BASE}/file/${encodeURIComponent(fileId)}?from=admin`;
+  const authHeaders = getAuthHeaders();
+  const resp = await fetch(fileUrl, { credentials: 'include', headers: authHeaders });
+  if (!resp.ok) {
+    throw new Error(`HTTP ${resp.status}`);
+  }
+  const headers = resp.headers;
+  const isEncrypted = headers.get('X-File-Encrypted') === 'true';
+  const origType = headers.get('X-File-Original-File-Type') || '';
+  const algo = headers.get('X-File-Algorithm') || '';
+  let blob = await resp.blob();
+
+  if (!isEncrypted) {
+    return { blob, isEncrypted: false, headers };
+  }
+
+  // =========  ========== E2EE 解密流程 ============
+  if (!E2EE_KEY) {
+    const password = prompt(
+      `该文件已端到端加密，请输入加密密码：\n（服务器不会存储密码，忘记密码无法找回）\n\n文件名：${escapeHtml(expectedName || fileId)}`
+    );
+    if (!password) throw new Error('用户取消解密');
+    const username = currentUserInfo?.username || 'admin';
+    const salt = headers.get('X-File-KDF-Salt') || `${username}_imgbed_e2ee`;
+    E2EE_KEY = await deriveKey(password, salt);
+    E2EE_ENABLED = true;
+    loadSecuritySettings();
+  }
+
+  showToast('🔐 正在客户端解密...', 'info');
+  const encBuf = await blob.arrayBuffer();
+  try {
+    const plainBuf = await decryptFile(encBuf, E2EE_KEY);
+    const finalType = origType || (forDownload ? '' : blob.type) || 'application/octet-stream';
+    blob = new Blob([plainBuf], { type: finalType });
+    return { blob, isEncrypted: true, headers, decrypted: true, originalFileType: finalType };
+  } catch (e) {
+    // 解密失败：密码可能不对（或损坏），让用户重输
+    E2EE_KEY = null;
+    E2EE_ENABLED = false;
+    loadSecuritySettings();
+    showToast('解密失败，密码错误或文件损坏，已清除密钥，请重试', 'error');
+    throw new Error('解密失败：' + (e.message || '密码错误'));
+  }
 }
 
-// 图片/视频预览 - 全屏查看
-function previewFile(fileIdEncoded, fileName, mediaType) {
+async function downloadFile(fileIdEncoded) {
   const fileId = decodeURIComponent(fileIdEncoded);
-  const mediaUrl = `${API_BASE}/file/${encodeURIComponent(fileId)}?from=admin`;
+  try {
+    // 根据原文件名（从 fileList 中取，如果找不到就用 fileId）
+    let originalName = null;
+    try {
+      if (fileList && Array.isArray(fileList)) {
+        const hit = fileList.find(f => f.fileId === fileId || f.fileId === fileIdEncoded);
+        if (hit) originalName = hit.name;
+      }
+    } catch {}
+    const { blob, isEncrypted } = await fetchAndMaybeDecrypt(fileIdEncoded, { forDownload: true, expectedName: originalName });
+    const fileName = originalName || (isEncrypted ? 'encrypted-file' : fileId);
+    const url = URL.createObjectURL(blob);
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } finally {
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+  } catch (err) {
+    showToast('下载失败: ' + (err.message || err), 'error');
+  }
+}
+
+// 图片/视频预览 - 全屏查看（E2EE：加密文件先解密再预览）
+async function previewFile(fileIdEncoded, fileName, mediaType) {
+  const fileId = decodeURIComponent(fileIdEncoded);
+  const rawMediaUrl = `${API_BASE}/file/${encodeURIComponent(fileId)}?from=admin`;
   const overlay = document.createElement('div');
   overlay.className = 'preview-overlay';
   overlay.onclick = () => overlay.remove();
@@ -2298,7 +2373,6 @@ function previewFile(fileIdEncoded, fileName, mediaType) {
       content.innerHTML = '';
       content.appendChild(errDiv);
     };
-    mediaEl.src = mediaUrl;
   } else {
     mediaEl = document.createElement('img');
     mediaEl.className = 'preview-img';
@@ -2312,12 +2386,37 @@ function previewFile(fileIdEncoded, fileName, mediaType) {
       content.innerHTML = '';
       content.appendChild(errDiv);
     };
-    mediaEl.src = mediaUrl;
   }
+
+  // 默认先用普通加载；如果是加密的则 fetch+解密后再用 Blob URL
+  (async () => {
+    try {
+      const { blob, isEncrypted } = await fetchAndMaybeDecrypt(fileIdEncoded, { expectedName: fileName });
+      const blobUrl = URL.createObjectURL(blob);
+      mediaEl.src = blobUrl;
+      // 给 download 按钮用解密后的 Blob URL
+      dlBtn.onclick = () => {
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = fileName || (isEncrypted ? 'encrypted-file' : fileId);
+        document.body.appendChild(a); a.click(); a.remove();
+      };
+      setTimeout(() => {
+        try { URL.revokeObjectURL(blobUrl); } catch {}
+      }, 60 * 60 * 1000);
+    } catch (e) {
+      content.classList.remove('loaded');
+      const errDiv = document.createElement('div');
+      errDiv.className = 'preview-error';
+      errDiv.textContent = '预览失败：' + (e.message || e);
+      content.innerHTML = '';
+      content.appendChild(errDiv);
+    }
+  })();
   
   const loading = document.createElement('div');
   loading.className = 'preview-loading';
-  loading.textContent = isVideo ? '视频加载中...' : '加载中...';
+  loading.textContent = isVideo ? '视频加载中...（E2EE 加密文件会先客户端解密后显示）' : '加载中...（E2EE 加密文件会先客户端解密后显示）';
   
   const info = document.createElement('div');
   info.className = 'preview-info';
@@ -2330,7 +2429,8 @@ function previewFile(fileIdEncoded, fileName, mediaType) {
   dlBtn.className = 'btn btn-outline';
   dlBtn.style.cssText = 'color:#fff;border-color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);';
   dlBtn.textContent = '⬇️ 下载';
-  dlBtn.onclick = () => window.open(mediaUrl, '_blank');
+  // 初始值：未解密完成前先用原 URL（在解密完成后会被上面的 async 覆盖）
+  dlBtn.onclick = () => downloadFile(fileIdEncoded);
   
   const closeBtn = document.createElement('button');
   closeBtn.className = 'btn btn-outline';
@@ -2963,35 +3063,51 @@ async function handleFiles(fileList, targetDir) {
 
 async function uploadFile(file, targetDir) {
   const uploadId = `upload-item-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-  const isChunked = file.size > CHUNK_SIZE;
+  const originalFileForSize = file;
+
+  // ===== E2EE：上传前客户端加密（单文件/分块统一在入口加密，避免分块解密对齐复杂度） =====
+  let actualFile = file;
+  if (E2EE_ENABLED) {
+    if (!E2EE_KEY) {
+      showToast('E2EE 密钥未初始化，请先重新设置加密密码', 'error');
+      throw new Error('E2EE key not ready');
+    }
+  }
+
+  const totalChunks = Math.ceil(actualFile.size / CHUNK_SIZE);
+  const isChunked = actualFile.size > CHUNK_SIZE;
   
-  // 断点续传: 检查是否有未完成的上传
+  // 断点续传: 检查是否有未完成的上传（注意：E2EE 加密后的文件重新上传时，加密是新的，不要 resume 旧会话）
   let resumedUploadId = null;
   let resumedCompletedChunks = [];
   if (isChunked) {
-    const resumeInfo = getResumeInfo(file);
-    if (resumeInfo) {
-      // 查询后端该上传会话是否还有效,以及已完成的分片
-      try {
-        const resp = await apiFetch(`${API_BASE}/api/manage/chunkStatus?uploadId=${resumeInfo.uploadId}&totalChunks=${totalChunks}`, {
-          headers: getAuthHeaders()
-        });
-        if (resp.valid && resp.completedCount > 0 && resp.completedCount < totalChunks) {
-          resumedUploadId = resumeInfo.uploadId;
-          resumedCompletedChunks = resp.completedChunks;
-          showToast(`检测到未完成的上传,从 ${resp.completedCount}/${totalChunks} 继续`, 'info');
-        } else if (resp.valid && resp.completedCount === totalChunks) {
-          // 所有分片已完成,直接合并
-          showToast('所有分片已上传,正在合并...', 'info');
-          // 走正常合并流程
-        } else {
-          // 会话过期,清除记录
-          clearResumeInfo(file);
+    // 注意：E2EE 模式下加密文件每次字节都不同，resume 旧会话会导致无法合并
+    if (!E2EE_ENABLED) {
+      const resumeInfo = getResumeInfo(file);
+      if (resumeInfo) {
+        // 查询后端该上传会话是否还有效,以及已完成的分片
+        try {
+          const resp = await apiFetch(`${API_BASE}/api/manage/chunkStatus?uploadId=${resumeInfo.uploadId}&totalChunks=${totalChunks}`, {
+            headers: getAuthHeaders()
+          });
+          if (resp.valid && resp.completedCount > 0 && resp.completedCount < totalChunks) {
+            resumedUploadId = resumeInfo.uploadId;
+            resumedCompletedChunks = resp.completedChunks;
+            showToast(`检测到未完成的上传,从 ${resp.completedCount}/${totalChunks} 继续`, 'info');
+          } else if (resp.valid && resp.completedCount === totalChunks) {
+            // 所有分片已完成,直接合并
+            showToast('所有分片已上传,正在合并...', 'info');
+            // 走正常合并流程
+          } else {
+            // 会话过期,清除记录
+            clearResumeInfo(file);
+          }
+        } catch (e) {
+          console.warn('检查断点续传失败:', e.message);
         }
-      } catch (e) {
-        console.warn('检查断点续传失败:', e.message);
       }
+    } else {
+      clearResumeInfo(file);
     }
   }
   
@@ -3001,7 +3117,12 @@ async function uploadFile(file, targetDir) {
   item.className = 'upload-item';
   item.id = uploadId;
   const initialPercent = resumedCompletedChunks.length > 0 ? (resumedCompletedChunks.length / totalChunks * 95) : 0;
-  const initialStatus = resumedCompletedChunks.length > 0 ? `续传中 ${resumedCompletedChunks.length}/${totalChunks}` : (isChunked ? `${formatSize(file.size)} · 分片上传 ${totalChunks} 片` : `${formatSize(file.size)} · 直传`);
+  const initialStatus = (() => {
+    const base = resumedCompletedChunks.length > 0
+      ? `续传中 ${resumedCompletedChunks.length}/${totalChunks}`
+      : (isChunked ? `${formatSize(actualFile.size)} · 分片上传 ${totalChunks} 片` : `${formatSize(actualFile.size)} · 直传`);
+    return E2EE_ENABLED ? `🔐 ${base}` : base;
+  })();
   item.innerHTML = `
     <div style="font-size:1.5rem">${getFileIcon(file.name)}</div>
     <div class="upload-item-info">
@@ -3025,15 +3146,35 @@ async function uploadFile(file, targetDir) {
   };
   
   try {
-    if (isChunked) {
-      await chunkedUpload(file, totalChunks, updateProgress, resumedUploadId, resumedCompletedChunks, targetDir);
-    } else {
-      await directUpload(file, updateProgress, targetDir);
+    // E2EE：在这里加密，显示到 UI 进度的 0-1% 区间
+    if (E2EE_ENABLED) {
+      updateProgress(0, '🔐 正在客户端加密...');
+      const encStart = Date.now();
+      const encBuf = await encryptFile(file, E2EE_KEY);
+      const username = currentUserInfo?.username || 'admin';
+      const salt = username + '_imgbed_e2ee';
+      actualFile = new File([encBuf], file.name, { type: 'application/octet-stream' });
+      // 将 E2EE 元数据挂在 actualFile 上，方便下面的 upload 流程读入 formData
+      actualFile._e2ee = {
+        encrypted: true,
+        algorithm: 'AES-GCM-256',
+        salt: salt,
+        kdfIterations: 600000,
+        originalFileType: file.type || 'application/octet-stream',
+      };
+      const mb = (file.size / 1024 / 1024).toFixed(2);
+      updateProgress(1, `🔐 加密完成 ${mb}MB（${((Date.now()-encStart)/1000).toFixed(1)}s）准备上传...`);
     }
-    updateProgress(100, '上传完成', true);
-    showToast(`${file.name} 上传成功`, 'success');
+
+    if (isChunked) {
+      await chunkedUpload(actualFile, totalChunks, updateProgress, resumedUploadId, resumedCompletedChunks, targetDir, file);
+    } else {
+      await directUpload(actualFile, updateProgress, targetDir, file);
+    }
+    updateProgress(100, E2EE_ENABLED ? '🔐 加密上传完成' : '上传完成', true);
+    showToast(E2EE_ENABLED ? `🔐 ${file.name} 加密上传成功` : `${file.name} 上传成功`, 'success');
     // 上传成功,清除续传记录
-    if (isChunked) clearResumeInfo(file);
+    if (isChunked) clearResumeInfo(originalFileForSize);
   } catch (err) {
     updateProgress(0, '失败: ' + err.message, false, true);
     showToast(`${file.name} 上传失败: ${err.message}`, 'error');
@@ -3100,7 +3241,7 @@ function cancelResume(fileName) {
   showToast('已取消续传,重新选择文件将重新上传', 'info');
 }
 
-async function chunkedUpload(file, totalChunks, updateProgress, resumedUploadId = null, completedChunks = [], targetDir = null) {
+async function chunkedUpload(file, totalChunks, updateProgress, resumedUploadId = null, completedChunks = [], targetDir = null, originalFile = null) {
   const effectiveDir = targetDir !== null ? targetDir : currentDir;
   // Step 1: 初始化(或复用已有会话)
   let uploadId;
@@ -3111,17 +3252,28 @@ async function chunkedUpload(file, totalChunks, updateProgress, resumedUploadId 
     uploadId = resumedUploadId;
     updateProgress((completedSet.size / totalChunks) * 95, `续传中 ${completedSet.size}/${totalChunks}`);
   } else {
-    // 新上传: 初始化
+    // 新上传: 初始化（E2EE：加密元数据在此处一并提交给后端保存到 upload session）
     updateProgress(0, '初始化上传...');
     let formData = new FormData();
     formData.append('originalFileName', file.name);
     formData.append('originalFileType', file.type || 'application/octet-stream');
     formData.append('totalChunks', totalChunks);
-    
-    const initResp = await apiFetch(`${API_BASE}/upload?initChunked=true&uploadChannel=telegram`, {
+
+    if (file && file._e2ee) {
+      const md = file._e2ee;
+      formData.append('e2ee_encrypted', md.encrypted ? '1' : '0');
+      if (md.algorithm) formData.append('e2ee_algorithm', md.algorithm);
+      if (md.salt) formData.append('e2ee_salt', md.salt);
+      if (md.kdfIterations) formData.append('e2ee_kdf_iterations', String(md.kdfIterations));
+      if (md.originalFileType) formData.append('e2ee_original_file_type', md.originalFileType);
+    }
+
+    const effectiveDirInit = effectiveDir;
+    const initUrl = `${API_BASE}/upload?initChunked=true&uploadChannel=telegram${effectiveDirInit ? '&uploadFolder=' + encodeURIComponent(effectiveDirInit) : ''}`;
+    const initResp = await apiFetch(initUrl, {
       method: 'POST', body: formData, headers: getAuthHeaders()
     });
-    
+
     uploadId = initResp.uploadId;
   }
   
@@ -3294,11 +3446,21 @@ async function chunkedUpload(file, totalChunks, updateProgress, resumedUploadId 
   updateProgress(99, '完成');
 }
 
-async function directUpload(file, updateProgress, targetDir = null) {
+async function directUpload(file, updateProgress, targetDir = null, originalFile = null) {
   const effectiveDir = targetDir !== null ? targetDir : currentDir;
   updateProgress(0, '上传中...');
   const formData = new FormData();
   formData.append('file', file);
+
+  // E2EE：附加加密元数据（密钥/密码不会上传，仅上传非敏感元数据：算法、salt、迭代次数、原始文件类型）
+  if (file && file._e2ee) {
+    const md = file._e2ee;
+    formData.append('e2ee_encrypted', md.encrypted ? '1' : '0');
+    if (md.algorithm) formData.append('e2ee_algorithm', md.algorithm);
+    if (md.salt) formData.append('e2ee_salt', md.salt);
+    if (md.kdfIterations) formData.append('e2ee_kdf_iterations', String(md.kdfIterations));
+    if (md.originalFileType) formData.append('e2ee_original_file_type', md.originalFileType);
+  }
   
   let url = `${API_BASE}/upload?uploadNameType=origin&uploadChannel=telegram`;
   if (effectiveDir) url += `&uploadFolder=${encodeURIComponent(effectiveDir)}`;
