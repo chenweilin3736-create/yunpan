@@ -597,15 +597,11 @@ async function uploadFileToTelegram(context, fullId, metadata, fileExt, fileName
             res = createResponse('Error: Failed to write to KV database', { status: 500 });
         }
 
-        // 结束上传
-        waitUntil(endUpload(context, fullId, metadata));
-
-    } catch (error) {
+            } catch (error) {
         console.log('Telegram upload error:', error.message);
         res = createResponse('upload error, check your environment params about telegram channel!', { status: 400 });
-    } finally {
-        return res;
     }
+    return res;
 }
 
 
