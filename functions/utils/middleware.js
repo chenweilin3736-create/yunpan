@@ -38,8 +38,21 @@ export async function telemetryData(context) {
   
   if (!disableTelemetry) {
     try {
+      // 敏感请求头黑名单：禁止上传到 Sentry，避免泄露会话/凭据
+      const SENSITIVE_HEADERS = new Set([
+        'cookie', 'authorization', 'authcode', 'x-auth-code',
+        'x-api-key', 'x-auth-token', 'proxy-authorization',
+        'set-cookie', 'x-real-ip', 'x-forwarded-for'
+      ]);
+      const isSensitiveHeader = (key) => SENSITIVE_HEADERS.has((key || '').toLowerCase());
+
       const parsedHeaders = {};
       context.request.headers.forEach((value, key) => {
+        // 跳过敏感头：既不记录到 context 也不上传到 Sentry
+        if (isSensitiveHeader(key)) {
+          parsedHeaders[key] = '[REDACTED]';
+          return;
+        }
         parsedHeaders[key] = value
         //check if the value is empty
         if (value.length > 0) {
@@ -91,10 +104,8 @@ export async function traceData(context, span, op, name) {
   const data = context.data
   if (data.telemetry) {
     if (span) {
-      console.log("span finish")
       span.finish();
     } else {
-      console.log("span start")
       span = await context.data.transaction.startChild(
         { op: op, name: name },
       );
