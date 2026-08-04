@@ -12,15 +12,22 @@ class D1Database {
 
 /**
  * 保存文件记录 (替代 KV.put)
+ * 支持 expirationTtl：D1 无原生 TTL，将过期时间写入 metadata.ExpiresAt（毫秒时间戳）
+ * 读取时若已过期则返回 null（模拟 KV 自动过期行为）
  */
 D1Database.prototype.putFile = function(fileId, value, options) {
     value = value || '';
     options = options || {};
     var metadata = options.metadata || {};
-    
+
+    // 处理 expirationTtl：记录绝对过期时间到 metadata（KV expirationTtl 单位为秒）
+    if (options.expirationTtl && options.expirationTtl > 0) {
+        metadata.ExpiresAt = Date.now() + options.expirationTtl * 1000;
+    }
+
     // 从metadata中提取字段用于索引
     var extractedFields = this.extractMetadataFields(metadata);
-    
+
     var stmt = this.db.prepare(
         'INSERT OR REPLACE INTO files (' +
         'id, value, metadata, file_name, file_type, file_size, ' +
@@ -29,7 +36,7 @@ D1Database.prototype.putFile = function(fileId, value, options) {
         'tg_file_id, tg_chat_id, tg_bot_token, is_chunked' +
         ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
-    
+
     return stmt.bind(
         fileId,
         value,
@@ -53,6 +60,14 @@ D1Database.prototype.putFile = function(fileId, value, options) {
 };
 
 /**
+ * 检查记录是否已过期（依据 metadata.ExpiresAt）
+ */
+function isRecordExpired(metadata) {
+    if (!metadata || !metadata.ExpiresAt) return false;
+    return Date.now() > metadata.ExpiresAt;
+}
+
+/**
  * 获取文件记录 (替代 KV.get)
  */
 D1Database.prototype.getFile = function(fileId) {
@@ -60,10 +75,19 @@ D1Database.prototype.getFile = function(fileId) {
     var stmt = this.db.prepare('SELECT * FROM files WHERE id = ?');
     return stmt.bind(fileId).first().then(function(result) {
         if (!result) return null;
-        
+
+        var metadata = JSON.parse(result.metadata || '{}');
+
+        // 模拟 KV 自动过期：已过期记录视为不存在
+        if (isRecordExpired(metadata)) {
+            // 触发懒删除，避免过期记录长期占用空间
+            self.deleteFile(fileId).catch(function() {});
+            return null;
+        }
+
         return {
             value: result.value,
-            metadata: JSON.parse(result.metadata || '{}')
+            metadata: metadata
         };
     });
 };
@@ -120,12 +144,17 @@ D1Database.prototype.listFiles = function(options) {
             results.pop();
         }
 
-        var keys = results.map(function(row) {
-            return {
+        var keys = [];
+        for (var i = 0; i < results.length; i++) {
+            var row = results[i];
+            var metadata = JSON.parse(row.metadata || '{}');
+            // 过滤已过期记录（模拟 KV 自动过期）
+            if (isRecordExpired(metadata)) continue;
+            keys.push({
                 name: row.id,
-                metadata: JSON.parse(row.metadata || '{}')
-            };
-        });
+                metadata: metadata
+            });
+        }
         
         return {
             keys: keys,
