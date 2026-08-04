@@ -1,0 +1,439 @@
+// 总控核心配置
+const MASTER_API = 'https://zip.cm.edu.kg/all.txt';
+const PROXY_URL = 'https://proxy.api.030101.xyz/';
+
+// 核心国家/地区中英文及 Flag 映射字典
+const countryMeta = {
+    "AD": "🇺🇸安道尔", "AE": "🇦🇪阿联酋", "AF": "🇦🇫阿富汗", "AG": "🇦🇬安提瓜", "AL": "🇦🇱阿尔巴尼亚", "AM": "🇦🇲亚美尼亚",
+    "AO": "🇦🇴安哥拉", "AR": "🇦🇷阿根廷", "AT": "🇦🇹奥地利", "AU": "🇦🇺澳大利亚", "AZ": "🇦🇿阿塞拜疆", "BA": "🇧🇦波黑",
+    "BB": "🇧🇧巴巴多斯", "BD": "🇧🇩孟加拉国", "BE": "🇧🇪比利时", "BF": "🇧🇫布基纳法索", "BG": "🇧🇬保加利亚", "BH": "🇧🇭巴林",
+    "BI": "🇧🇮布隆迪", "BJ": "🇧🇯贝宁", "BN": "🇧🇳文莱", "BO": "🇧🇴玻利维亚", "BR": "🇧🇷巴西", "BS": "🇧🇸巴哈马",
+    "BT": "🇧🇹不丹", "BW": "🇧🇼博茨瓦纳", "BY": "🇧🇾白俄罗斯", "BZ": "🇧🇿伯利兹", "CA": "🇨🇦加拿大", "CD": "🇨🇩刚果金",
+    "CF": "🇨🇫中非", "CG": "🇨🇬刚果布", "CH": "🇨🇭瑞士", "CI": "🇨🇮科特迪瓦", "CL": "🇨🇱智利", "CM": "🇨🇲喀麦隆",
+    "CN": "🇨🇳中国", "CO": "🇨🇴哥伦比亚", "CR": "🇨🇷哥斯达黎加", "CU": "🇨🇺古巴", "CV": "🇨🇻佛得角", "CY": "🇨🇾塞浦路斯",
+    "CZ": "🇨🇿捷克", "DE": "🇩🇪德国", "DJ": "🇩🇯吉布提", "DK": "🇩🇰丹麦", "DO": "🇩🇴多米尼加", "DZ": "🇩🇿阿尔及利亚",
+    "EC": "🇪🇨厄瓜多尔", "EE": "🇪🇪爱沙尼亚", "EG": "🇪🇬埃及", "ER": "🇪🇷厄立特里亚", "ES": "🇪🇸西班牙", "ET": "🇪🇹埃塞俄比亚",
+    "FI": "🇫🇮芬兰", "FJ": "🇫🇯斐济", "FM": "🇫🇲密克罗尼西亚", "FR": "🇫🇷法国", "GA": "🇬🇦加蓬", "GB": "🇬🇧英国",
+    "GD": "🇬🇩格林纳达", "GE": "🇬🇪格鲁吉亚", "GH": "🇬🇭加纳", "GM": "🇬🇲冈比亚", "GN": "🇬🇳几内亚", "GQ": "🇬🇶赤道几内亚",
+    "GR": "🇬🇷希腊", "GT": "🇬🇹危地马拉", "GW": "🇬🇼几内亚比绍", "GY": "🇬🇾实用圭亚那", "HK": "🇭🇰中国香港", "HN": "🇭🇳洪都拉斯",
+    "HR": "🇭🇷克罗地亚", "HT": "🇭🇹海地", "HU": "🇭🇺匈牙利", "ID": "🇮🇩印尼", "IE": "🇮🇪爱尔兰", "IL": "🇮🇱以色列",
+    "IN": "🇮🇳印度", "IQ": "🇮🇶伊拉克", "IR": "🇮🇷伊朗", "IS": "🇮🇸冰岛", "IT": "🇮🇹意大利", "JM": "🇯🇲牙买加",
+    "JO": "🇺🇸约旦", "JP": "🇯🇵日本", "KE": "🇰🇪肯尼亚", "KG": "🇰🇬吉尔吉斯斯坦", "KH": "🇰🇭柬埔寨", "KM": "🇰🇲科摩罗",
+    "KP": "🇰🇵朝鲜", "KR": "🇰🇷韩国", "KW": "🇰🇼科威特", "KZ": "🇰🇿哈萨克斯坦", "LA": "🇱🇦老挝", "LB": "🇱🇧黎巴嫩",
+    "LC": "🇱🇨圣卢西亚", "LI": "🇱🇮列支敦士登", "LK": "🇱🇰斯里兰卡", "LR": "🇱🇷利比里亚", "LS": "🇱🇸莱索托", "LT": "🇱🇹立宛",
+    "LU": "🇱🇺卢森堡", "LV": "🇱🇻拉脱维亚", "LY": "🇱🇾利比亚", "MA": "🇲🇦摩洛哥", "MC": "🇲🇨摩纳哥", "MD": "🇲🇩摩尔多瓦",
+    "ME": "🇲🇪黑山", "MG": "🇲🇬马达加斯加", "MH": "🇲🇭马绍尔群岛", "MK": "🇲🇰北马其顿", "ML": "🇲🇱马里", "MM": "🇲🇲缅甸",
+    "MN": "🇲🇳蒙古国", "MO": "🇲🇴中国澳门", "MR": "🇲🇷毛里塔尼亚", "MT": "🇲🇹马耳他", "MU": "🇲🇺毛里求斯", "MV": "🇲🇻马尔代夫",
+    "MW": "🇲🇼马拉维", "MX": "🇲🇽墨西哥", "MY": "🇲🇾马来西亚", "MZ": "🇲🇿莫桑比克", "NA": "🇳🇦纳米比亚", "NE": "🇳🇪尼日尔",
+    "NG": "🇳🇬尼日利亚", "NI": "🇳🇮尼加拉瓜", "NL": "🇳🇱荷兰", "NO": "🇳🇴挪威", "NP": "🇳🇵尼泊尔", "NR": "🇳🇷瑙鲁",
+    "NZ": "🇳🇿新西兰", "OM": "🇴🇲阿曼", "PA": "🇵🇦巴拿马", "PE": "🇵🇪秘鲁", "PG": "🇵🇬巴布亚新几内亚", "PH": "🇵🇭菲律宾",
+    "PK": "🇵🇰巴基斯坦", "PL": "🇵🇱波兰", "PT": "🇵🇹葡萄牙", "PW": "🇵🇼帕劳", "PY": "🇵🇾巴拉圭", "QA": "🇶🇦卡塔尔",
+    "RO": "🇷🇴罗马尼亚", "RS": "🇷🇸塞尔维亚", "RU": "🇷🇺俄罗斯", "RW": "🇷🇼卢旺达", "SA": "🇸🇦沙特阿拉伯", "SB": "🇸🇧所罗门群岛",
+    "SC": "🇸🇨塞舌尔", "SD": "🇸🇩苏丹", "SE": "🇸🇪瑞典", "SG": "🇸🇬新加坡", "SI": "🇸🇮斯洛文尼亚", "SK": "🇸🇰斯洛伐克",
+    "SL": "🇸🇱塞拉利昂", "SM": "🇸🇲圣马力诺", "SN": "🇸🇳塞内加尔", "SO": "🇸🇴索马里", "SR": "🇸🇷苏里南", "SS": "🇸🇸南苏丹",
+    "ST": "🇸🇹圣多美和普林西比", "SV": "🇸🇻萨尔瓦多", "SY": "🇸🇾叙利亚", "SZ": "🇸🇿斯威士兰", "TD": "🇹🇩乍得", "TG": "🇹🇬多哥",
+    "TH": "🇹🇭泰国", "TJ": "🇹🇯塔吉克斯坦", "TL": "🇹🇱东帝汶", "TM": "🇹🇲土库曼斯坦", "TN": "🇹🇳突尼斯", "TO": "🇹🇴汤加",
+    "TR": "🇹🇷土耳其", "TT": "🇹🇹特立尼达和多哥", "TV": "🇹🇻图瓦卢", "TW": "🇹🇼中国台湾", "TZ": "🇹🇿坦桑尼亚", "UA": "🇺🇦乌克兰",
+    "UG": "🇺🇬乌干达", "US": "🇺🇸美国", "UY": "🇺🇾乌拉圭", "UZ": "🇺🇿乌兹别克斯坦", "VA": "🇻🇦梵蒂冈", "VC": "🇻🇨圣文森特",
+    "VE": "🇻🇪委内瑞拉", "VN": "🇻🇳越南", "VU": "🇻🇺瓦努阿图", "WS": "🇼🇸萨摩亚", "YE": "🇾🇪也门", "ZA": "🇿🇦南非",
+    "ZM": "🇿🇲赞比亚", "ZW": "🇿🇼津巴布韦"
+};
+
+export default {
+    async fetch(request, env, ctx) {
+        const url = new URL(request.url);
+        const path = url.pathname;
+
+        // 订阅 API 分流路由
+        if (path.startsWith('/edgetunnel/')) {
+            try {
+                const countrySegment = path.substring('/edgetunnel/'.length);
+                if (!countrySegment) return new Response('未指定国家代码', { status: 400 });
+                const targetCountries = countrySegment.toUpperCase().split('-');
+
+                const limitStr = url.searchParams.get('limit') || '5';
+                const limit = parseInt(limitStr, 10);
+
+                const response = await fetch(PROXY_URL + MASTER_API);
+                if (!response.ok) throw new Error('从总控源获取数据失败');
+                const textData = await response.text();
+
+                const ipDataStore = {};
+                const lines = textData.split('\n');
+                lines.forEach(line => {
+                    const trimmed = line.trim();
+                    if (trimmed && trimmed.includes('#')) {
+                        const parts = trimmed.split('#');
+                        const ipPort = parts[0].trim();
+                        const country = parts[1].trim().toUpperCase();
+                        if (ipPort && country) {
+                            if (!ipDataStore[country]) ipDataStore[country] = [];
+                            ipDataStore[country].push(ipPort);
+                        }
+                    }
+                });
+
+                let resultLines = [];
+                targetCountries.forEach(country => {
+                    if (ipDataStore[country]) {
+                        const ips = ipDataStore[country].slice(0, limit);
+                        const remark = countryMeta[country] || `🌐${country}`;
+                        ips.forEach(ip => {
+                            resultLines.push(`${ip}#${remark}`);
+                        });
+                    }
+                });
+
+                return new Response(resultLines.join('\n'), {
+                    headers: { 
+                        'Content-Type': 'text/plain; charset=utf-8',
+                        'Access-Control-Allow-Origin': '*'
+                    }
+                });
+            } catch (err) {
+                return new Response(`内核错误: ${err.message}`, { status: 500 });
+            }
+        }
+
+        // 主页路由
+        return new Response(getFrontendHTML(url.origin), {
+            headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        });
+    }
+};
+
+// 全新重构：高视觉冲击力极客风前端 UI 源码
+function getFrontendHTML(domainRoot) {
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>裤佬全球优选ip - 顶级分控管理系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        /* 霓虹流光渐变文字特效 */
+        @keyframes streamLight {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .neon-title {
+            background: linear-gradient(90deg, #ff007f, #7928ca, #00dfd8, #ff007f);
+            background-size: 300% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: streamLight 6s linear infinite;
+        }
+        /* 头像呼吸灯光圈 */
+        .avatar-glow {
+            box-shadow: 0 0 20px rgba(0, 223, 216, 0.6);
+            animation: pulseGlow 2s infinite alternate;
+        }
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 10px rgba(0, 223, 216, 0.4); }
+            100% { box-shadow: 0 0 25px rgba(255, 0, 127, 0.8); }
+        }
+        /* 紧凑平铺网格无滑动区 */
+        .dense-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: flex-start;
+        }
+        /* 极致精简的国家标签 */
+        .country-tag {
+            transition: all 0.15s ease;
+        }
+        .country-tag:hover {
+            border-color: #00dfd8;
+            background-color: rgba(0, 223, 216, 0.05);        }
+        .country-tag.checked-active {
+            background: linear-gradient(135deg, #7928ca, #3b82f6) !important;
+            color: white !important;
+            border-color: transparent !important;
+            box-shadow: 0 2px 8px rgba(121, 40, 202, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
+
+    <header class="w-full pt-12 pb-8 flex flex-col items-center justify-center text-center px-4">
+        <h1 class="text-4xl md:text-6xl font-black uppercase tracking-wider neon-title select-none pb-2">
+            裤佬全球优选ip
+        </h1>
+        
+        <div class="mt-4 relative group">
+            <img src="https://mpimg.cn/view.php/f28da3eac8f392e9fa2ba91723b2bf4c.png" 
+                 alt="裤佬头像" 
+                 class="w-24 h-24 rounded-full object-cover border-2 border-cyan-400 avatar-glow group-hover:scale-105 transition-transform duration-300">
+        </div>
+
+        <a href="https://t.me/stymei" target="_blank" 
+           class="mt-4 px-4 py-1.5 bg-blue-950/60 hover:bg-blue-900/80 border border-blue-700/50 rounded-full text-xs text-blue-400 font-semibold tracking-wide transition shadow-lg inline-flex items-center gap-1.5 animate-bounce">
+            ✈️ 关注Telegram频道 获取最新节点技术支持
+        </a>
+    </header>
+
+    <main class="flex-1 max-w-7xl mx-auto px-4 pb-12 w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <section class="lg:col-span-2 bg-slate-900/80 border border-slate-800 p-6 rounded-3xl shadow-2xl flex flex-col">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-800">
+                <div>
+                    <h2 class="font-bold text-lg text-white">1. 全球节点一览（点击勾选）</h2>
+                    <p class="text-xs text-slate-500">全网实时感知，密集阵列一次性平铺，无需反复翻页滑动</p>
+                </div>
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button id="selectAllBtn" class="flex-1 sm:flex-none text-xs font-bold bg-slate-800 hover:bg-slate-700 text-cyan-400 px-3 py-1.5 rounded-lg cursor-pointer transition">全选所有</button>
+                    <button id="selectNoneBtn" class="flex-1 sm:flex-none text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-400 px-3 py-1.5 rounded-lg cursor-pointer transition">一键清空</button>
+                </div>
+            </div>
+            
+            <div id="loadingStatus" class="py-16 text-center text-sm text-cyan-400/70 font-mono animate-pulse">SYSTEM SYNCING... 正在同步总控数据</div>
+            
+            <div id="countryGrid" class="dense-box hidden">
+                </div>
+
+            <div class="mt-5 p-3 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between text-xs font-mono">
+                <span class="text-slate-500">📊 实时联动数据状态：</span>
+                <span id="counterDisplay" class="text-cyan-400 font-bold bg-cyan-950/40 px-2.5 py-1 rounded-md border border-cyan-800/30">
+                    等待总控载入...
+                </span>
+            </div>
+        </section>
+
+        <section class="lg:col-span-1 flex flex-col gap-6">
+            
+            <div class="bg-slate-900/80 border border-slate-800 p-6 rounded-3xl shadow-2xl flex flex-col">
+                <h2 class="font-bold text-base text-white mb-4 pb-2 border-b border-slate-800">2. 自定义分控输出限制</h2>
+                
+                <div class="mb-5 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">默认单个地区抽取数量</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="globalLimit" value="1" min="1" max="200" 
+                               class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-cyan-500 transition">
+                        <button id="syncLimitBtn" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-medium text-slate-300 transition cursor-pointer">应用所有</button>
+                    </div>
+                </div>
+
+                <button id="generateBtn" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black tracking-widest rounded-xl shadow-lg transition duration-200 cursor-pointer text-center mb-4 text-sm uppercase">
+                    ⚡ 动态生成 API 订阅接口
+                </button>
+
+                <a href="https://t.me/stymei" target="_blank" 
+                   class="block p-3.5 bg-gradient-to-br from-blue-950/50 to-slate-900 border border-blue-900/60 rounded-xl hover:border-blue-500/50 transition duration-300 shadow-inner group">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-gradient-to-r from-blue-500 to-cyan-500 text-slate-950 p-2 rounded-xl text-lg font-bold group-hover:scale-110 transition-transform">
+                            ✈️
+                        </div>
+                        <div class="truncate flex-1">
+                            <p class="text-sm font-black text-blue-400 group-hover:text-blue-300 transition-colors">关注Telegram频道</p>
+                            <p class="text-[11px] text-slate-500 truncate mt-0.5">获取最新科学上网技术、高速节点不迷路</p>
+                        </div>
+                    </div>
+                </a>
+
+                <div id="resultArea" class="hidden space-y-4 mt-2">
+                    <div class="border-t border-slate-800 pt-4">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-xs font-bold text-slate-400 flex items-center gap-1">🔗 专属同步 API 链接</span>
+                            <button id="copyLinkBtn" class="text-xs text-cyan-400 hover:underline cursor-pointer">复制链接</button>
+                        </div>
+                        <textarea id="outputLink" readonly class="w-full h-16 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl font-mono text-[11px] text-slate-400 focus:outline-none select-all resize-none"></textarea>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-xs font-bold text-slate-400 flex items-center gap-1">👁️ 节点动态预览</span>
+                            <button id="copyIPsBtn" class="text-xs text-cyan-400 hover:underline cursor-pointer">复制数据</button>
+                        </div>
+                        <textarea id="outputIPs" readonly class="w-full h-40 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl font-mono text-[11px] text-emerald-400 focus:outline-none select-all custom-scrollbar"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <button id="refreshBtn" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-400 tracking-wider rounded-xl transition cursor-pointer">
+                🔄 手动强制拉取总控源
+            </button>
+        </section>
+    </main>
+
+    <footer class="w-full border-t border-slate-900 py-6 text-center text-xs text-slate-600 mt-auto tracking-widest">
+        &copy; 2026 <span class="text-slate-400 font-bold">裤佬全球优选ip</span> | 动态极速节点感知架构
+    </footer>
+
+    <div id="toast" class="fixed bottom-5 right-5 bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 text-white text-xs font-bold py-3 px-5 rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-2">
+        <span class="text-cyan-400">⚡</span> <span id="toastMsg">SUCCESS</span>
+    </div>
+
+    <script>
+        const domainRoot = "${domainRoot}";
+        const countryMeta = ${JSON.stringify(countryMeta)};
+        let ipDataStore = {};
+        let totalCountriesCount = 0;
+
+        document.addEventListener('DOMContentLoaded', fetchData);
+        document.getElementById('refreshBtn').addEventListener('click', fetchData);
+        document.getElementById('generateBtn').addEventListener('click', generateApi);
+        document.getElementById('selectAllBtn').addEventListener('click', () => toggleAll(true));
+        document.getElementById('selectNoneBtn').addEventListener('click', () => toggleAll(false));
+        document.getElementById('syncLimitBtn').addEventListener('click', applyGlobalLimitToAll);
+
+        async function fetchData() {
+            try {
+                document.getElementById('loadingStatus').classList.remove('hidden');
+                document.getElementById('countryGrid').classList.add('hidden');
+                
+                let res = await fetch('https://proxy.api.030101.xyz/https://zip.cm.edu.kg/all.txt');
+                let text = await res.text();
+                
+                ipDataStore = {};
+                text.split('\\n').forEach(line => {
+                    const trimmed = line.trim();
+                    if(trimmed && trimmed.includes('#')) {
+                        const parts = trimmed.split('#');
+                        const ipPort = parts[0].trim();
+                        const country = parts[1].trim().toUpperCase();
+                        if(ipPort && country) {
+                            if(!ipDataStore[country]) ipDataStore[country] = [];
+                            ipDataStore[country].push(ipPort);                        }
+                    }
+                });
+                renderCountries();
+            } catch(e) {
+                showToast('总控联络超时，请重试');
+            }
+        }
+
+        function renderCountries() {
+            const grid = document.getElementById('countryGrid');
+            grid.innerHTML = '';
+            
+            const sortedCountries = Object.keys(ipDataStore).sort((a,b) => {
+                const nameA = countryMeta[a] || a;
+                const nameB = countryMeta[b] || b;
+                return nameA.localeCompare(nameB, 'zh-CN');
+            });
+
+            totalCountriesCount = sortedCountries.length;
+            const defaultLimit = document.getElementById('globalLimit').value || 1;
+
+            sortedCountries.forEach(code => {
+                const count = ipDataStore[code].length;
+                const remark = countryMeta[code] || '🌐 ' + code;
+                
+                // 密集轻量卡片组件
+                const tag = document.createElement('div');
+                tag.className = "country-tag flex items-center bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 gap-1.5 text-xs text-slate-300 cursor-pointer select-none";
+                tag.setAttribute('data-code', code);
+                
+                tag.innerHTML = \`
+                    <input type="checkbox" value="\${code}" class="tag-cb hidden">
+                    <span class="font-medium truncate max-w-[85px]">\${remark}</span>
+                    <span class="text-[10px] text-slate-500 font-mono">(\${count})</span>
+                    <input type="number" data-country="\${code}" value="\${defaultLimit}" min="1" max="\${count}" 
+                           class="tag-limit w-8 bg-slate-950 border border-slate-800 rounded text-center text-[10px] text-cyan-400 font-mono ml-0.5 focus:outline-none focus:border-cyan-500"
+                           onclick="event.stopPropagation();">
+                \`;
+
+                // 点击标签本身切换勾选状态
+                tag.addEventListener('click', function() {
+                    const cb = this.querySelector('.tag-cb');
+                    cb.checked = !cb.checked;
+                    updateTagStyle(this, cb.checked);
+                    updateCounter();
+                });
+
+                grid.appendChild(tag);
+            });
+
+            document.getElementById('loadingStatus').classList.add('hidden');
+            grid.classList.remove('hidden');
+            updateCounter();
+        }
+
+        function updateTagStyle(element, isChecked) {
+            if(isChecked) {
+                element.classList.add('checked-active');
+            } else {
+                element.classList.remove('checked-active');
+            }
+        }
+
+        function toggleAll(status) {
+            document.querySelectorAll('.country-tag').forEach(tag => {
+                const cb = tag.querySelector('.tag-cb');
+                cb.checked = status;
+                updateTagStyle(tag, status);
+            });
+            updateCounter();
+        }
+
+        function applyGlobalLimitToAll() {
+            const val = document.getElementById('globalLimit').value || 1;
+            document.querySelectorAll('.tag-limit').forEach(input => input.value = val);
+            showToast('已同步覆盖所有小标签提取数');
+        }
+
+        function updateCounter() {
+            const checkedCount = document.querySelectorAll('.tag-cb:checked').length;
+            const display = document.getElementById('counterDisplay');
+            display.textContent = \`已勾选 \${checkedCount} / \${totalCountriesCount} 个地区\`;
+        }
+
+        function generateApi() {
+            const selectedChecked = Array.from(document.querySelectorAll('.tag-cb:checked')).map(cb => cb.value);
+            if(selectedChecked.length === 0) {
+                alert('请在左侧密集面板中，至少点击挑选一个地区标签');
+                return;
+            }
+
+            const countryPath = selectedChecked.join('-');
+            const limitValue = document.getElementById('globalLimit').value || 1;
+
+            // 拼接生成的动态高感知同步订阅路由
+            const finalApiLink = \`\${domainRoot}/edgetunnel/\${countryPath}?limit=\${limitValue}\`;
+            document.getElementById('outputLink').value = finalApiLink;
+
+            // 动态渲染当时捕获的节点数据
+            let previewIps = [];
+            selectedChecked.forEach(code => {
+                if(ipDataStore[code]) {
+                    const localLimit = parseInt(document.querySelector(\`input[data-country="\${code}"]\`).value) || 1;
+                    const sliceIps = ipDataStore[code].slice(0, localLimit);
+                    const remark = countryMeta[code] || '🌐 ' + code;
+                    sliceIps.forEach(ip => {
+                        previewIps.push(\`\${ip}#\${remark}\`);
+                    });
+                }
+            });
+            document.getElementById('outputIPs').value = previewIps.join('\\n');
+            document.getElementById('resultArea').classList.remove('hidden');
+
+            setupCopy('copyLinkBtn', finalApiLink, '⚡ 专属同步API订阅链接已成功复制');
+            setupCopy('copyIPsBtn', previewIps.join('\\n'), '⚡ 当前快照IP列表已复制');
+        }
+
+        function setupCopy(btnId, text, msg) {
+            const btn = document.getElementById(btnId);
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(text).then(() => showToast(msg));
+            });
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>`;
+}
