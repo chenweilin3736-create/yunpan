@@ -25,7 +25,7 @@ export async function onRequest(context) {
         ]);
 
         const totalFiles = indexInfo?.totalFiles || 0;
-        let totalSize = 0; // 从索引中计算
+        let totalSize = 0; // 从索引中计算（字节数）
         const storageByType = {};
         let starredCount = 0;
         let trashCount = 0;
@@ -42,8 +42,9 @@ export async function onRequest(context) {
             for (const file of indexResult.files) {
                 const meta = file.metadata || {};
 
-                // 统计总大小
-                totalSize += (meta.FileSize || 0);
+                // 统计总大小（优先用 FileSizeBytes 字节数，回退到 FileSize MB 字符串换算）
+                const sizeBytes = getFileSizeBytes(meta);
+                totalSize += sizeBytes;
 
                 // 统计星标数
                 if (meta.Starred === true) {
@@ -60,7 +61,7 @@ export async function onRequest(context) {
                 if (!storageByType[fileType]) {
                     storageByType[fileType] = 0;
                 }
-                storageByType[fileType] += (meta.FileSize || 0);
+                storageByType[fileType] += sizeBytes;
             }
         }
 
@@ -96,6 +97,23 @@ export async function onRequest(context) {
         console.error('Error in stats API:', error);
         return jsonRes({ error: error.message || 'Internal server error' }, 500);
     }
+}
+
+/**
+ * 从文件 metadata 中提取字节数
+ * 优先用 FileSizeBytes（字节数），回退到 FileSize（MB 字符串）换算
+ */
+function getFileSizeBytes(meta) {
+    if (meta.FileSizeBytes && typeof meta.FileSizeBytes === 'number') {
+        return meta.FileSizeBytes;
+    }
+    if (meta.FileSize) {
+        var mb = parseFloat(meta.FileSize);
+        if (!isNaN(mb)) {
+            return Math.round(mb * 1024 * 1024);
+        }
+    }
+    return 0;
 }
 
 /**
