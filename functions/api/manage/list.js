@@ -369,6 +369,8 @@ async function getAllFileRecords(env, dir) {
 
             cursor = response.cursor;
 
+            // 本批内并行序列化（serializeFileRecordForManagement 在传入 viewContext 时不产生 db 调用，可安全并行）
+            const batchPromises = [];
             for (const item of response.keys) {
                 // 跳过管理相关的键和回收站、上传会话等系统键
                 if (item.name.startsWith('manage@') || item.name.startsWith('chunk_') ||
@@ -382,13 +384,14 @@ async function getAllFileRecords(env, dir) {
                     continue;
                 }
 
-                allRecords.push(await serializeFileRecordForManagement(db, env, item, metadataViewContext));
+                batchPromises.push(serializeFileRecordForManagement(db, env, item, metadataViewContext));
             }
 
-            if (!cursor) break;
+            // 并行处理本批，避免 N+1 串行 await
+            const batchResults = await Promise.all(batchPromises);
+            allRecords.push(...batchResults);
 
-            // 添加协作点
-            await new Promise(resolve => setTimeout(resolve, 10));
+            if (!cursor) break;
         }
 
         // 提取目录信息
